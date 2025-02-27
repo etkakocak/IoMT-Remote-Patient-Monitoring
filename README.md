@@ -1,2 +1,1 @@
-# IoMT-Remote-Patient-Monitoring
-Embedded System Project
+# Remote Patient Monitoring
