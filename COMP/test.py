@@ -31,6 +31,52 @@ print("=== Kullanıcı Bilgileri ===")
 age = int(input("Yaşınızı girin: "))
 gender = input("Cinsiyet (E/K): ").strip().upper()
 gender_num = 1 if gender == "E" else 0
+smoking = input("Sigara içiyor musunuz? (E/H): ").strip().upper() == "E"
+exercise = input("Haftada en az 3 gün düzenli spor yapıyor musunuz? (E/H): ").strip().upper() == "E"
+hypertension = input("Daha önce hipertansiyon veya diyabet tanısı aldınız mı? (E/H): ").strip().upper() == "E"
+bp_status = input("Tansiyonunuz genellikle nasıl? (Yüksek/Y, Düşük/D, Normal/N): ").strip().upper()
+
+################################
+# Dinamik a0, a1, a2 Hesaplama
+################################
+################################
+# Bilimsel a0, a1, a2 Hesaplama
+################################
+def estimate_parameters(age, gender, smoking, exercise, hypertension, bp_status):
+    """
+    Kullanıcının yaşı, cinsiyeti, sigara kullanımı, spor alışkanlığı, hipertansiyon geçmişi ve
+    tansiyon durumuna göre a0, a1 ve a2 parametrelerini hesaplar.
+    """
+
+    # 🔹 Arteriyel Elastisite (a0) Hesaplama
+    a0 = 2.0 - (age / 100)  # Yaş arttıkça arteriyel elastisite azalır
+    if gender == "K":
+        a0 += 0.1  # Kadınlarda genç yaşta biraz daha yüksek olabilir
+    if smoking:
+        a0 -= 0.2  # Sigara içmek arteriyel elastisiteyi düşürür
+    if exercise:
+        a0 += 0.2  # Düzenli spor yapmak elastisiteyi artırır
+    if hypertension:
+        a0 -= 0.3  # Hipertansiyon arterlerin sertleşmesine neden olur
+
+    # 🔹 Arteriyel Sertlik (a1) Hesaplama (PWV yaşa bağlı artıyor)
+    a1 = 5.0 + 0.1 * (age - 20)  # 20 yaş için 5.0 m/s, her yıl için 0.1 ekleniyor
+
+    # 🔹 Nabız Dalgası Yayılma Hızı (a2) Hesaplama
+    a2 = 0.5  # Baz değer
+    if hypertension:
+        a2 += 1.0  # Hipertansiyon arteriyel sertliği artırır
+    if smoking:
+        a2 += 0.5  # Sigara arter duvarlarını sertleştirir
+    if bp_status == "D":
+        a2 -= 0.5  # Düşük tansiyonu olanlarda PWV daha düşük olur
+    if bp_status == "Y":
+        a2 += 0.5  # Yüksek tansiyonu olanlarda PWV artar
+
+    return a0, a1, a2
+
+# Kullanıcıya özel parametreleri belirle
+a0, a1, a2 = estimate_parameters(age, gender, smoking, exercise, hypertension, bp_status)
 
 ################################
 # Seri okuma (Daha güvenli versiyon)
@@ -86,7 +132,6 @@ def rolling_detect_peaks(signal_list, time_list, sensor_name, peak_list):
         height_th = base + 0.005  # Daha düşük eşik
         prominence_th = 0.002  # Daha düşük eşik
 
-
     peaks, _ = find_peaks(
         filtered,
         distance=50,  # En az 500 ms arası
@@ -126,31 +171,15 @@ def calculate_ptt(peaks1, peaks2):
 
     return np.mean(diffs)  # Ortalama PTT değeri döndür
 
-
-
 ################################
-# PTT -> SBP (Tahmini Tansiyon)
+# PTT -> SBP (Bilimsel Model)
 ################################
-def estimate_sbp(ptt_ms, age, gender_num):
+def estimate_sbp(ptt_ms, a0, a1, a2):
     ptt_s = ptt_ms / 1000.0  # PTT'yi saniyeye çeviriyoruz
-    if ptt_s < 0.15:
-        ptt_s = 0.15
-    if ptt_s > 0.40:
-        ptt_s = 0.40
+    sbp = a0 + np.sqrt(a1 + (a2 / (ptt_s ** 2)))
 
-    base_sbp = 50
-    age_factor = 0.4 * age  # Yaş faktörünü biraz azalt
-    gender_factor = 3 * gender_num  # Cinsiyet faktörünü azalt
-    ptt_factor = 450 / ptt_s  # **700 yerine 450 kullan!**
-
-    raw_sbp = base_sbp + age_factor + gender_factor + ptt_factor
-
-    if raw_sbp < 80:
-        raw_sbp = 80  # 📌 Minimum 80 mmHg olsun
-    elif raw_sbp > 180:
-        raw_sbp = 180  # 📌 Maksimum 180 mmHg olsun
-
-    return raw_sbp
+    # return max(80, min(sbp, 180))  # 📌 SBP değerini 80-180 mmHg arasında sınırla
+    return sbp
 
 ################################
 # 1) Gürültü Ölçümü
@@ -209,14 +238,12 @@ while not done:
         print("\n⚠️ Süre doldu. Yeterli PTT bulunamadı.")
         break
 
-    time.sleep(0.02)
-
 ################################
 # 4) Final Hesaplama
 ################################
 if ptt_results:
     ptt_avg = np.mean(ptt_results)
-    sbp_val = estimate_sbp(ptt_avg, age, gender_num)
+    sbp_val = estimate_sbp(ptt_avg, a0, a1, a2)
     print(f"\n=== Sonuçlar ===\nOrtalama PTT: {ptt_avg:.2f} ms => SBP(Tahmini): {sbp_val:.2f} mmHg")
 else:
     print("PTT hesaplanamadı. Ölçüm başarısız.")
