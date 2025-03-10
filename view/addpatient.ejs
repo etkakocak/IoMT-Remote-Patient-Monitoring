@@ -7,20 +7,32 @@
     <link rel="stylesheet" href="/css/style.css">
     <link rel="stylesheet" href="/css/addpatient.css">
     <script>
-        function startTagScan() {
+        function scanTag() {
+            fetch('/api/scan-card', { method: "POST" }) // ✅ POST metodu ile gönder
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        setTimeout(() => checkForTag(), 3000); // 6 saniye sonra sonucu kontrol et
+                    } else {
+                        alert("❌ Scan request failed.");
+                    }
+                })
+                .catch(error => console.error("❌ Error:", error));
+        }
+    
+        function checkForTag() {
             fetch('/api/get-latest-tag')
                 .then(response => response.json())
                 .then(data => {
                     if (data.uid) {
-                        console.log("✅ Yeni Tag Okundu:", data.uid);
-                        document.getElementById("uid").value = data.uid; // UID otomatik doldur
+                        document.getElementById("uid").value = data.uid;
                     } else {
-                        alert("No tag detected. Please try again.");
+                        alert("❌ No tag detected within the time limit.");
                     }
                 })
-                .catch(error => console.error("❌ Hata oluştu:", error));
+                .catch(error => console.error("❌ Error fetching tag:", error));
         }
-    </script>
+    </script>    
 </head>
 <body>
     <nav>
@@ -44,7 +56,7 @@
             <label for="uid">Patient ID (RFID UID):</label>
             <div class="uid-container">
                 <input type="text" id="uid" name="uid" placeholder="Press 'Scan Tag' to get UID" readonly required>
-                <button type="button" onclick="startTagScan()">Scan Tag</button>
+                <button type="button" onclick="scanTag()">Scan Tag</button>
             </div>
 
             <label for="age">Age:</label>

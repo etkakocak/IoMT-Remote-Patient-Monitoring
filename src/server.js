@@ -83,9 +83,6 @@ app.post('/auth/healthcare-login', async (req, res) => {
     }
 });
 
-// 📌 ✅ **Hasta Girişi (Kart Okutma ile)**
-let lastScannedUID = null; // Son okutulan UID'yi saklayacak değişken
-
 // ✅ **Patient Login (Tag ile Giriş)**
 app.post('/auth/patient-login', async (req, res) => {
     const { uid } = req.body;
@@ -112,7 +109,33 @@ app.post('/auth/patient-login', async (req, res) => {
     }
 });
 
-// 📌 ✅ **Web Sayfası Tarafından Son Okunan UID'yi Kontrol Etme (Polling İçin)**
+let scanRequestActive = false;
+let lastScannedUID = null;
+
+// ✅ Web Sayfası Scan Butonuna Basınca Çalışan Endpoint
+app.post('/api/scan-card', (req, res) => {
+    scanRequestActive = true; // ✅ RPi'nin kart okumasını başlatması için izin ver
+    lastScannedUID = null; // 🔄 Önceki taramaları temizle
+    res.json({ success: true, message: "Scanning started." });
+
+    setTimeout(() => {
+        if (!lastScannedUID) {
+            scanRequestActive = false;
+        }
+    }, 3000);
+});
+
+// ✅ Raspberry Pi Tarama Başlatmasını Bekleyen Endpoint
+app.get('/api/scan-card', async (req, res) => {
+    if (scanRequestActive) {
+        res.json('SCAN');
+        scanRequestActive = false;
+    } else {
+        res.json({ success: false });
+    }
+});
+
+// ✅ **Web Sayfası Tarafından Son Okunan UID'yi Kontrol Etme**
 app.get('/api/get-latest-tag', (req, res) => {
     if (lastScannedUID) {
         res.json({ uid: lastScannedUID });
@@ -122,7 +145,7 @@ app.get('/api/get-latest-tag', (req, res) => {
     }
 });
 
-// ✅ **Raspberry Pi'den Gelen Kart UID'yi Kaydetme (Tag Okuma)**
+// ✅ **RPi, okuduğu kartı sunucuya POST eder**
 app.post('/api/send-tag', (req, res) => {
     const { uid } = req.body;
 
@@ -131,11 +154,10 @@ app.post('/api/send-tag', (req, res) => {
     }
 
     console.log(`✅ Raspberry Pi'den Yeni Kart Algılandı: ${uid}`);
+    
     lastScannedUID = uid; // Son okutulan kartı kaydet
-
     res.json({ success: true, message: `Tag received: ${uid}` });
 });
-
 
 // 📌 ✅ **Sağlık Çalışanı Kayıt (POST İşlemi)**
 app.post('/auth/register', async (req, res) => {

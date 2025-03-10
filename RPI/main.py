@@ -1,29 +1,19 @@
+import network
+import urequests
+import time
 from machine import Pin, SPI
 import NFC_PN532 as nfc
-import time
-import urequests  # HTTP istekleri için MicroPython kütüphanesi
-import network
 
-# WiFi Bilgileri (Burayı kendi ağınıza göre değiştirin!)
+# 📡 **WiFi Bilgileri**
 WIFI_SSID = "ssid"
 WIFI_PASSWORD = "password"
 
-# Web Sunucusunun URL'si
-SERVER_URL = "http://192.168.x.x:5000/api/send-tag"
+# 📡 **Web Sunucusunun IP Adresi**
+SERVER_IP = "192.168.x.x"
+SCAN_CARD_URL = f"http://{SERVER_IP}:5000/api/scan-card"
+SEND_TAG_URL = f"http://{SERVER_IP}:5000/api/send-tag"
 
-# SPI Tanımlama
-spi_dev = SPI(1,
-              baudrate=1000000,
-              polarity=0,
-              phase=0,
-              sck=Pin(10),
-              mosi=Pin(11),
-              miso=Pin(12))
-
-cs_pin = Pin(13, Pin.OUT)
-cs_pin.on()
-
-# 📡 WiFi'ye Bağlan
+# 📡 **WiFi'ye Bağlan**
 def connect_wifi():
     wlan = network.WLAN(network.STA_IF)
     wlan.active(True)
@@ -37,43 +27,58 @@ def connect_wifi():
 
 connect_wifi()
 
-# PN532 Başlat
+# 🔄 **Kart Okuma Fonksiyonu**
+def scan_card():
+    print("\n📡 Kart okutmaya başlıyoruz...")
+
+    timeout = time.time() + 3  # 5 saniye bekleme süresi
+    while time.time() < timeout:
+        uid = pn532.read_passive_target(timeout=500)
+
+        if uid:
+            uid_str = "-".join([str(i) for i in uid])
+            print(f"📍 Kart Algılandı! UID: {uid_str}")
+            return uid_str  # Okunan UID'yi döndür
+
+    print("❌ Kart okunamadı, zaman aşımı!")
+    return None  # Zaman aşımı durumunda None döndür
+
+# 📡 **SPI & PN532 Başlat**
+spi_dev = SPI(1, baudrate=1000000, polarity=0, phase=0, sck=Pin(10), mosi=Pin(11), miso=Pin(12))
+cs_pin = Pin(13, Pin.OUT)
+cs_pin.on()
+
 pn532 = nfc.PN532(spi_dev, cs_pin)
 
-# Firmware Versiyonu Kontrolü
 try:
     ic, ver, rev, support = pn532.get_firmware_version()
     print("✅ PN532 bulundu! Firmware sürümü: {}.{}".format(ver, rev))
 except RuntimeError as e:
     print("❌ PN532 algılanamadı:", e)
-    time.sleep(1)
-    try:
-        ic, ver, rev, support = pn532.get_firmware_version()
-        print("✅ PN532 bulundu! Firmware sürümü: {}.{}".format(ver, rev))
-    except RuntimeError as e2:
-        print("❌ İkinci denemede de algılanamadı:", e2)
 
-# MiFare kartları okuyabilmek için PN532'yi konfigüre et
 pn532.SAM_configuration()
 
-# Kart okuma döngüsü
-print("\n📡 Kart okutmaya hazır! Bir kartı modüle yaklaştır...")
-
+# 📡 **RPi Tarafında Sürekli Bekleme Döngüsü**
 while True:
-    uid = pn532.read_passive_target(timeout=500)  # 500 ms boyunca kart tarama
+    try:
+        response = urequests.get(SCAN_CARD_URL)
+        data = response.json()
+        response.close()
 
-    if uid:
-        uid_str = "-".join([str(i) for i in uid])
-        print("\n📍 Kart Algılandı! UID:", uid_str)
-        # Web Sunucusuna POST isteği gönder
-        try:
-            response = urequests.post(SERVER_URL, json={"uid": uid_str})
-            print("📡 Sunucudan gelen cevap:", response.text)
-            response.close()
-        except Exception as e:
-            print("❌ Sunucuya bağlanırken hata:", e)
-    else:
-        print(".", end="")  # Kart yoksa ekrana nokta koyarak beklediğini göster
+        if data == ('SCAN'):
+            print("🔄 Web Sunucusu Tarama Başlattı!")
+            # ✅ **Kart taramasını başlat**
+            uid = scan_card()  
+            if uid:
+                # 📡 **Sunucuya tag bilgisini gönder**
+                print(f"📡 Sunucuya UID {uid} gönderiliyor...")
+                response = urequests.post(SEND_TAG_URL, json={"uid": uid})
+                print("📡 Sunucudan gelen cevap:", response.text)
+                response.close()
+            else:
+                print("❌ Kart taranamadı veya zaman aşımı!")
 
-    time.sleep(0.5)
+    except Exception as e:
+        print("❌ Hata:", e)
 
+    time.sleep(1)  # 1 saniye bekle ve tekrar kontrol et
