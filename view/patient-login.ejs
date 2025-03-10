@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patient Login</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/auth.css">
+    <script>
+        function scanTag() {
+            fetch('/api/get-latest-tag')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.uid) {
+                        console.log("✅ Tag Detected:", data.uid);
+                        // UID'yi server'a gönder
+                        fetch('/auth/patient-login', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ uid: data.uid })
+                        })
+                        .then(response => response.json())
+                        .then(result => {
+                            if (result.success) {
+                                window.location.href = "/patient-dashboard"; // Başarılı giriş
+                            } else {
+                                alert(result.message);
+                            }
+                        })
+                        .catch(error => console.error("❌ Error:", error));
+                    } else {
+                        alert("No tag detected. Please try again.");
+                    }
+                })
+                .catch(error => console.error("❌ Error fetching tag:", error));
+        }
+    </script>
+</head>
+<body>
+    <nav>
+        <div class="logo">Remote Patient Monitoring</div>
+        <ul>
+            <li><a href="/">Home</a></li>
+        </ul>
+    </nav>
+
+    <section class="auth-container">
+        <h1>Patient Login</h1>
+        <p>Scan your tag to log in.</p>
+        <button onclick="scanTag()" class="btn btn-scan">Scan Tag</button>
+    </section>
+</body>
+</html>

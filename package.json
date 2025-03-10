@@ -1,0 +1,52 @@
+{
+  "name": "b2-website",
+  "version": "1.0.0",
+  "description": "B2 Website CRUD Project",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "http-server": "npx http-server -p 9001",
+    "dev": "vite",
+    "build": "vite build",
+    "serve": "vite preview",
+    "htmlhint": "npx htmlhint public src || exit 0",
+    "stylelint": "npx stylelint **/*.css || exit 0",
+    "stylelint:fix": "npx stylelint --fix **/*.css || exit 0",
+    "eslint": "npx eslint . || exit 0",
+    "eslint:fix": "npx eslint --fix . || exit 0",
+    "jsdoc": "npx jsdoc -c .jsdoc.json || exit 0",
+    "lint": "npm run htmlhint && npm run stylelint && npm run eslint",
+    "test": "npm run lint",
+    "clean": "rm -rf build/",
+    "clean-all": "npm run clean && rm -rf node_modules/ && rm -f package-lock.json"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bcryptjs": "^3.0.2",
+    "connect-flash": "^0.1.1",
+    "dotenv": "^16.4.7",
+    "ejs": "^3.1.10",
+    "express": "^4.21.2",
+    "express-session": "^1.18.1",
+    "jsdom": "^26.0.0",
+    "mongodb": "^6.13.1",
+    "mongoose": "^8.10.1"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.1",
+    "eslint-config-standard": "^17.1.0",
+    "eslint-plugin-import": "^2.31.0",
+    "eslint-plugin-jsdoc": "^50.5.0",
+    "eslint-plugin-n": "^17.13.1",
+    "eslint-plugin-promise": "^7.1.0",
+    "htmlhint": "^1.1.4",
+    "http-server": "^14.1.1",
+    "jsdoc": "^4.0.4",
+    "stylelint": "^16.10.0",
+    "stylelint-config-recommended": "^14.0.1",
+    "vite": "^5.4.11"
+  }
+}

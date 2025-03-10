@@ -1,0 +1,9 @@
+build/
+node_modules/
+package-lock.json
+.env
+.editorconfig
+.eslintrc.cjs
+.jsdoc.json
+.stylelintrc.cjs
+vite.config.js

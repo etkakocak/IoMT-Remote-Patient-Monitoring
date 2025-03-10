@@ -1,0 +1,71 @@
+/* Sayfayı Dikey Ortalamak İçin */
+.auth-container {
+    background: white;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+    width: 350px;
+    text-align: center;
+    margin: 50px auto;  /* Sayfanın ortasında olmasını sağlar */
+}
+
+/* Başlık */
+.auth-container h1 {
+    margin-bottom: 20px;
+    color: #333;
+}
+
+/* Form Stili */
+.auth-container form {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Input Alanları */
+.auth-container label {
+    text-align: left;
+    font-weight: bold;
+    margin-bottom: 5px;
+    color: #555;
+}
+
+.auth-container input {
+    padding: 10px;
+    margin-bottom: 15px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 14px;
+}
+
+/* Giriş Butonu */
+.auth-container button {
+    padding: 12px;
+    background: #007bff;
+    border: none;
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: 0.3s;
+    font-weight: bold;
+}
+
+.auth-container button:hover {
+    background: #0056b3;
+}
+
+/* Linkler */
+.auth-container p {
+    font-size: 14px;
+    margin-top: 10px;
+}
+
+.auth-container a {
+    color: #007bff;
+    font-weight: bold;
+    text-decoration: none;
+}
+
+.auth-container a:hover {
+    text-decoration: underline;
+}

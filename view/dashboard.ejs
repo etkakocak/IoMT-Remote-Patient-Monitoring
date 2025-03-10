@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Healthcare Dashboard</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <nav>
+        <div class="logo">Remote Patient Monitoring</div>
+        <ul>
+            <li><a href="/add-patient" class="btn btn-add">➕ Add Patient</a></li>  <!-- Hasta Ekle Butonu -->
+            <li><a href="/auth/logout" class="btn btn-logout">Logout</a></li>
+        </ul>
+    </nav>
+
+    <section class="dashboard-container">
+        <h1>Welcome, <%= user.fullname %></h1>
+        <p>This is the healthcare professional dashboard.</p>
+    </section>
+</body>
+</html>
