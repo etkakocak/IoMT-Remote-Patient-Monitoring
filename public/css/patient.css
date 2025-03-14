@@ -1,0 +1,74 @@
+/* General Container */
+.dashboard-container {
+    max-width: 800px;
+    margin: 20px auto;
+    padding: 20px;
+    background: white;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    text-align: center;
+}
+
+/* Health Data Table */
+.health-data {
+    width: 100%;
+    margin-top: 20px;
+    border-collapse: collapse;
+}
+
+.health-data th, .health-data td {
+    border: 1px solid #ddd;
+    padding: 10px;
+}
+
+.health-data th {
+    background: #f4f4f4;
+}
+
+/* Buttons */
+.btn-test {
+    background: #007BFF;
+    color: white;
+    padding: 10px 20px;
+    font-size: 16px;
+    border: none;
+    cursor: pointer;
+    border-radius: 5px;
+    margin-top: 20px;
+    display: block;
+    width: 100%;
+}
+
+.btn-test:hover {
+    background: #0056b3;
+}
+
+/* Instructions Box */
+.instructions {
+    background: #fffbcc;
+    padding: 20px;
+    margin-top: 20px;
+    border: 2px solid #e6c300;
+    border-radius: 8px;
+}
+
+.hidden {
+    display: none;
+}
+
+.instruction-image {
+    width: 100px;
+    margin: 10px;
+}
+
+#countdown {
+    font-size: 24px;
+    font-weight: bold;
+    color: red;
+}
+
+.result {
+    font-size: 18px;
+    font-weight: bold;
+    margin-top: 20px;
+}

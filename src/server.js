@@ -5,6 +5,7 @@ import path from 'path';
 import session from 'express-session';
 import flash from 'connect-flash';
 import User from './user.js';
+import TestResult from './testresult.js';
 
 dotenv.config();
 connectDB();
@@ -100,9 +101,11 @@ app.post('/auth/patient-login', async (req, res) => {
         }
 
         // ✅ Kullanıcıyı oturum açmış hale getir
-        req.session.user = { id: patient._id.toString(), fullname: patient.fullname, role: "patient" };
+        req.session.user = { id: patient._id.toString(), fullname: patient.fullname, username: patient.username, role: "patient" };
 
         res.json({ success: true });
+
+        console.log("🔍 Session içeriği:", req.session.user?.username);
     } catch (error) {
         console.error("❌ Patient login error:", error);
         res.status(500).json({ success: false, message: "Server error." });
@@ -157,6 +160,84 @@ app.post('/api/send-tag', (req, res) => {
     
     lastScannedUID = uid; // Son okutulan kartı kaydet
     res.json({ success: true, message: `Tag received: ${uid}` });
+});
+
+let btRequestActive = false;
+let lastMeasuredTemp = null;
+let pendingMeasurementForUser = null;
+
+// ✅ **Hasta Web Sayfası "Başlat" Dediğinde Çalışan Endpoint**
+app.post('/api/measure-bodytemp', (req, res) => {
+    if (!req.session.user) {
+        return res.json({ success: false, message: "Not logged in" });
+    } else {
+        pendingMeasurementForUser = req.session.user.username;
+    }
+
+    console.log("🔄 Web sayfası vücut sıcaklığı ölçümünü başlattı...");
+    
+    if (btRequestActive) {
+        return res.json({ success: false, message: "Measurement already in progress." });
+    }
+
+    btRequestActive = true; // ✅ Testin başladığını kaydet
+    lastMeasuredTemp = null; // Önceki veriyi temizle
+
+    res.json({ success: true, message: "Measurement started." });
+});
+
+// ✅ **RPi'nin ölçüm isteğini aldığı endpoint**
+app.get('/api/measure-bodytemp', (req, res) => {
+    if (btRequestActive) {
+        res.json("measure"); // 📡 RPi'ye "measure" komutunu gönder
+    } else {
+        res.json({ success: false, message: "No active measurement request." });
+    }
+});
+
+app.post('/api/store-bodytemp', async (req, res) => {
+    const { temperature } = req.body; 
+
+    const patientUID = pendingMeasurementForUser; // 🔥 Hasta UID
+
+    console.log(`✅ Vücut sıcaklığı ölçüldü: ${temperature}°C, Hasta: ${patientUID}`);
+
+    if (!patientUID) {
+        console.error("❌ Hasta UID bulunamadı! Session boş olabilir.");
+        return res.status(400).json({ success: false, message: "Patient UID is missing." });
+    }
+
+    try {
+        const newTest = new TestResult({
+            thepatient: patientUID, 
+            result: temperature, 
+            testType: "bodytemp"
+        });
+
+        await newTest.save();
+        console.log("✅ Test sonucu veritabanına kaydedildi!");
+
+        lastMeasuredTemp = temperature;
+        btRequestActive = false;
+
+        res.json({ success: true, message: "Measurement recorded.", temperature: lastMeasuredTemp });
+    } catch (error) {
+        console.error("❌ Test sonucu kaydedilirken hata oluştu:", error);
+        res.status(500).json({ success: false, message: "Database error." });
+    }
+});
+
+// ✅ **Hasta Web Sayfası, ölçüm sonucunu almak için burayı çağırır**
+app.get('/api/get-bodytemp', (req, res) => {
+    console.log("📡 Web sayfası ölçüm sonucunu sorguladı...");
+    if (lastMeasuredTemp !== null) {
+        console.log(`✅ Sunucudan dönen sıcaklık: ${lastMeasuredTemp}°C`);
+        res.json({ success: true, temperature: lastMeasuredTemp });
+        lastMeasuredTemp = null; // Kullanıldıktan sonra sıfırla!
+    } else {
+        console.log("❌ Sunucuda ölçüm sonucu bulunamadı.");
+        res.json({ success: false, message: "Measurement failed or not completed yet." });
+    }
 });
 
 // 📌 ✅ **Sağlık Çalışanı Kayıt (POST İşlemi)**

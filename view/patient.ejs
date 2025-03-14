@@ -1,11 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Patient Dashboard</title>
     <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/patient.css">
 </head>
+
 <body>
     <nav>
         <div class="logo">Remote Patient Monitoring</div>
@@ -15,8 +18,104 @@
     </nav>
 
     <section class="dashboard-container">
-        <h1>Welcome, <%= user.fullname %></h1>
+        <h1>Welcome, <%= user.fullname %>
+        </h1>
         <p>Here you can view your health data and recent monitoring.</p>
+
+        <h2>Start Health Monitoring</h2>
+        <button id="start-test-btn" onclick="startTest()">Start Test</button>
+
+        <div id="test-instructions" class="instructions hidden">
+            <h3>📢 Please Hold the Temperature Sensor!</h3>
+            <p>Place the sensor in contact with your skin for 40 seconds.</p>
+            <img src="/images/hand-sensor.png" alt="Hand Holding Sensor" class="instruction-image">
+            <img src="/images/body-sensor.png" alt="Sensor on Body" class="instruction-image">
+            <p id="countdown">40</p>
+        </div>
+
+        <p id="test-result" class="result"></p>
+        <p id="temp-result"></p>
     </section>
+
+    <script>
+        let testInProgress = false;
+
+        function startTest() {
+            if (testInProgress) return; // Eğer test zaten devam ediyorsa, tekrar başlatma.
+
+            testInProgress = true;
+            document.getElementById("test-instructions").classList.remove("hidden");
+            document.getElementById("start-test-btn").disabled = true; // Butonu devre dışı bırak
+            let countdown = 40;
+            let countdownElement = document.getElementById("countdown");
+            document.getElementById("test-result").innerText = "⏳ Please hold the sensor for 40 seconds...";
+
+            // 📡 **1. ADIM: Sunucuya testin başlatıldığını bildir**
+            fetch('/api/measure-bodytemp', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        startCountdown();
+                    } else {
+                        document.getElementById("test-result").innerText = "❌ Measurement could not be started.";
+                        resetTestState();
+                    }
+                })
+                .catch(error => {
+                    document.getElementById("test-result").innerText = "❌ Server error!";
+                    resetTestState();
+                });
+
+            // ⏳ **2. ADIM: 40 saniyelik geri sayımı başlat**
+            function startCountdown() {
+                let timer = setInterval(() => {
+                    countdown--;
+                    countdownElement.innerText = countdown;
+
+                    if (countdown <= 0) {
+                        clearInterval(timer);
+                        getMeasurementResult();
+                    }
+                }, 1000);
+            }
+
+            // 📡 **3. ADIM: 40 saniye sonunda sunucudan sıcaklık verisini al**
+            function getMeasurementResult(attempt = 0) {
+                fetch('/api/get-bodytemp')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) { // ✅ Başarıyla sıcaklık döndüyse
+                            document.getElementById("temp-result").innerText = `${data.temperature}°C`;
+                            document.getElementById("test-result").innerText = `✅ Measurement completed: ${data.temperature}°C`;
+                            resetTestState();
+                        } else {
+                            if (attempt < 10) { // ❌ Eğer başarısızsa 10 kez tekrar dene
+                                setTimeout(() => getMeasurementResult(attempt + 1), 1000); // 1 saniye bekle ve tekrar dene
+                            } else {
+                                document.getElementById("test-result").innerText = "❌ Measurement failed. Please try again.";
+                                resetTestState();
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        document.getElementById("test-result").innerText = "❌ Server error!";
+                        resetTestState();
+                    });
+            }
+
+
+
+            // ✅ **Testi Sıfırla ve Butonu Aktif Yap**
+            function resetTestState() {
+                document.getElementById("test-instructions").classList.add("hidden");
+                setTimeout(() => {
+                    document.getElementById("start-test-btn").disabled = false;
+                }, 3000); // 3 saniye sonra tekrar aktifleştir
+                testInProgress = false;
+            }
+        }
+    </script>
+
 </body>
+
 </html>
