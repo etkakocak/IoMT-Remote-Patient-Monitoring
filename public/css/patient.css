@@ -110,3 +110,42 @@
 #test-history tbody tr:hover {
     background: #e9f5ff;
 }
+
+.ekg-history-container {
+    text-align: center;
+    margin-top: 20px;
+}
+
+#view-ekg-btn {
+    padding: 10px 12px;
+    font-size: 16px;
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    cursor: pointer;
+    border-radius: 5px;
+    margin-bottom: 10px;
+}
+
+#view-ekg-btn:hover {
+    background-color: #b22222;
+}
+
+#ekg-container {
+    width: 80%;
+    margin: 0 auto;
+    padding: 20px;
+    background-color: #f8f8f8;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+}
+
+.hidden {
+    display: none;
+}
+
+#ekg-select {
+    padding: 8px;
+    margin-bottom: 10px;
+    font-size: 14px;
+}

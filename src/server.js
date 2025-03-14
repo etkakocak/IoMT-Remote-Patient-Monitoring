@@ -419,6 +419,34 @@ app.get('/api/get-ekg', (req, res) => {
     }
 });
 
+app.get('/api/get-latest-ekg', async (req, res) => {
+    if (!req.session.user) {
+        return res.status(401).json({ success: false, message: "Not logged in" });
+    }
+
+    try {
+        const latestEKGs = await EKGResult.find({ thepatient: req.session.user.username })
+            .sort({ createdAt: -1 }) // En son kayıtları getir
+            .limit(5); // Son 5 ölçümü getir
+
+        if (!latestEKGs.length) {
+            return res.json({ success: false, message: "No EKG data found." });
+        }
+
+        res.json({ 
+            success: true, 
+            ekgResults: latestEKGs.map(test => ({
+                id: test._id,
+                ekg: test.result, 
+                date: new Date(test.createdAt).toLocaleString()
+            }))
+        });
+    } catch (error) {
+        console.error("❌ Error fetching EKG data:", error);
+        res.status(500).json({ success: false, message: "Database error." });
+    }
+});
+
 
 
 // 📌 ✅ **Sağlık Çalışanı Kayıt (POST İşlemi)**

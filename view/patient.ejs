@@ -75,6 +75,22 @@
         </table>
     </section>
 
+    <section class="ekg-history-container">
+        <h2>EKG Visualization</h2>
+
+        <!-- Dropdown ile geçmiş testleri seçme -->
+        <label for="ekg-select">Select EKG Test:</label>
+        <select id="ekg-select">
+            <option value="">Loading...</option>
+        </select>
+
+        <button id="view-ekg-btn">View EKG</button>
+
+        <div id="ekg-container" class="hidden">
+            <canvas id="ekgChart"></canvas>
+        </div>
+    </section>
+
     <script>
         let tempTestInProgress = false;
         let spo2TestInProgress = false;
@@ -300,6 +316,9 @@
         // 📌 **Sayfa yüklendiğinde test geçmişini getir**
         document.addEventListener("DOMContentLoaded", loadTestHistory);
     </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="/js/EKG.js"></script>
 
 </body>
 
