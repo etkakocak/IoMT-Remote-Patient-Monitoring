@@ -3,15 +3,18 @@ import urequests
 import time
 from machine import Pin, SPI
 import NFC_PN532 as nfc
+import bodytemp
 
 # 📡 **WiFi Bilgileri**
-WIFI_SSID = "ssid"
-WIFI_PASSWORD = "password"
+WIFI_SSID = "Etkas S24 Ultra"
+WIFI_PASSWORD = "etka12345"
 
 # 📡 **Web Sunucusunun IP Adresi**
-SERVER_IP = "192.168.x.x"
+SERVER_IP = "192.168.3.181"
 SCAN_CARD_URL = f"http://{SERVER_IP}:5000/api/scan-card"
 SEND_TAG_URL = f"http://{SERVER_IP}:5000/api/send-tag"
+MEASURE_BODYTEMP_URL = f"http://{SERVER_IP}:5000/api/measure-bodytemp"
+STORE_BODYTEMP_URL = f"http://{SERVER_IP}:5000/api/store-bodytemp"
 
 # 📡 **WiFi'ye Bağlan**
 def connect_wifi():
@@ -61,11 +64,14 @@ pn532.SAM_configuration()
 # 📡 **RPi Tarafında Sürekli Bekleme Döngüsü**
 while True:
     try:
-        response = urequests.get(SCAN_CARD_URL)
-        data = response.json()
-        response.close()
+        scanresponse = urequests.get(SCAN_CARD_URL)
+        measresponse = urequests.get(MEASURE_BODYTEMP_URL)
+        scandata = scanresponse.json()
+        measdata = measresponse.json()
+        scanresponse.close()
+        measresponse.close()
 
-        if data == ('SCAN'):
+        if scandata == ('SCAN'):
             print("🔄 Web Sunucusu Tarama Başlattı!")
             # ✅ **Kart taramasını başlat**
             uid = scan_card()  
@@ -77,6 +83,20 @@ while True:
                 response.close()
             else:
                 print("❌ Kart taranamadı veya zaman aşımı!")
+                
+        if measdata == ('measure'):
+            print("🔄 Web Sunucusu Vücut Sıcaklığı Ölçümünü Başlattı!")
+            temp = bodytemp.get_bodytemp()  # ✅ Vücut sıcaklığını ölç
+            if temp:
+                # 📡 **Sunucuya sıcaklık verisini gönder**
+                print(f"📡 Sunucuya sıcaklık {temp:.2f}°C gönderiliyor...")
+                response = urequests.post(STORE_BODYTEMP_URL, json={"temperature": temp})
+                print("📡 Sunucudan gelen cevap:", response.text)
+                response.close()
+            else:
+                print("❌ Sıcaklık sensörü bulunamadı!")
+            print("⏳ Test tamamlandı.")
+            time.sleep(10)
 
     except Exception as e:
         print("❌ Hata:", e)
