@@ -18,12 +18,13 @@
     </nav>
 
     <section class="dashboard-container">
-        <h1>Welcome, <%= user.fullname %>
-        </h1>
+        <h1>Welcome, <%= user.fullname %></h1>
         <p>Here you can view your health data and recent monitoring.</p>
 
         <h2>Start Health Monitoring</h2>
-        <button id="start-test-btn" onclick="startTest()">Start Test</button>
+
+        <!-- Vücut Sıcaklığı Testi -->
+        <button id="start-test-btn" onclick="startBodyTempTest()">Start Temperature Test</button>
 
         <div id="test-instructions" class="instructions hidden">
             <h3>📢 Please Hold the Temperature Sensor!</h3>
@@ -35,22 +36,35 @@
 
         <p id="test-result" class="result"></p>
         <p id="temp-result"></p>
+
+        <!-- SpO2 Testi -->
+        <button id="start-spo2-btn" onclick="startSpo2Test()">Start SpO₂ Test</button>
+
+        <div id="spo2-instructions" class="instructions hidden">
+            <h3>📢 Please Hold Your Finger on the SpO₂ Sensor!</h3>
+            <p>Place your finger gently on the sensor and stay still.</p>
+            <img src="/images/spo2-finger.png" alt="Finger on SpO₂ Sensor" class="instruction-image">
+            <img src="/images/spo2-sensor.png" alt="SpO₂ Sensor Device" class="instruction-image">
+        </div>
+
+        <p id="spo2-result"></p>
+        <p id="spo2-test-result"></p>
     </section>
 
     <script>
-        let testInProgress = false;
+        let tempTestInProgress = false;
+        let spo2TestInProgress = false;
 
-        function startTest() {
-            if (testInProgress) return; // Eğer test zaten devam ediyorsa, tekrar başlatma.
-
-            testInProgress = true;
+        // 📌 **Vücut Sıcaklığı Testi Başlat**
+        function startBodyTempTest() {
+            if (tempTestInProgress) return; 
+            tempTestInProgress = true;
             document.getElementById("test-instructions").classList.remove("hidden");
-            document.getElementById("start-test-btn").disabled = true; // Butonu devre dışı bırak
+            document.getElementById("start-test-btn").disabled = true;
             let countdown = 40;
             let countdownElement = document.getElementById("countdown");
             document.getElementById("test-result").innerText = "⏳ Please hold the sensor for 40 seconds...";
 
-            // 📡 **1. ADIM: Sunucuya testin başlatıldığını bildir**
             fetch('/api/measure-bodytemp', { method: 'POST' })
                 .then(response => response.json())
                 .then(data => {
@@ -58,64 +72,112 @@
                         startCountdown();
                     } else {
                         document.getElementById("test-result").innerText = "❌ Measurement could not be started.";
-                        resetTestState();
+                        resetBodyTempTest();
                     }
                 })
                 .catch(error => {
                     document.getElementById("test-result").innerText = "❌ Server error!";
-                    resetTestState();
+                    resetBodyTempTest();
                 });
 
-            // ⏳ **2. ADIM: 40 saniyelik geri sayımı başlat**
             function startCountdown() {
                 let timer = setInterval(() => {
                     countdown--;
                     countdownElement.innerText = countdown;
-
                     if (countdown <= 0) {
                         clearInterval(timer);
-                        getMeasurementResult();
+                        getBodyTempResult();
                     }
                 }, 1000);
             }
 
-            // 📡 **3. ADIM: 40 saniye sonunda sunucudan sıcaklık verisini al**
-            function getMeasurementResult(attempt = 0) {
+            function getBodyTempResult(attempt = 0) {
                 fetch('/api/get-bodytemp')
                     .then(response => response.json())
                     .then(data => {
-                        if (data.success) { // ✅ Başarıyla sıcaklık döndüyse
+                        if (data.success) {
                             document.getElementById("temp-result").innerText = `${data.temperature}°C`;
                             document.getElementById("test-result").innerText = `✅ Measurement completed: ${data.temperature}°C`;
-                            resetTestState();
+                            resetBodyTempTest();
                         } else {
-                            if (attempt < 10) { // ❌ Eğer başarısızsa 10 kez tekrar dene
-                                setTimeout(() => getMeasurementResult(attempt + 1), 1000); // 1 saniye bekle ve tekrar dene
+                            if (attempt < 10) {
+                                setTimeout(() => getBodyTempResult(attempt + 1), 1000);
                             } else {
                                 document.getElementById("test-result").innerText = "❌ Measurement failed. Please try again.";
-                                resetTestState();
+                                resetBodyTempTest();
                             }
                         }
                     })
                     .catch(error => {
                         document.getElementById("test-result").innerText = "❌ Server error!";
-                        resetTestState();
+                        resetBodyTempTest();
                     });
             }
 
-
-
-            // ✅ **Testi Sıfırla ve Butonu Aktif Yap**
-            function resetTestState() {
+            function resetBodyTempTest() {
                 document.getElementById("test-instructions").classList.add("hidden");
                 setTimeout(() => {
                     document.getElementById("start-test-btn").disabled = false;
-                }, 3000); // 3 saniye sonra tekrar aktifleştir
-                testInProgress = false;
+                }, 3000);
+                tempTestInProgress = false;
+            }
+        }
+
+        // 📌 **SpO₂ Testi Başlat**
+        function startSpo2Test() {
+            if (spo2TestInProgress) return;
+            spo2TestInProgress = true;
+            document.getElementById("spo2-instructions").classList.remove("hidden");
+            document.getElementById("start-spo2-btn").disabled = true;
+            document.getElementById("spo2-test-result").innerText = "⏳ Measuring SpO₂... Please wait.";
+
+            fetch('/api/measure-spo2', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        getSpo2Result();
+                    } else {
+                        document.getElementById("spo2-test-result").innerText = "❌ SpO₂ Measurement could not be started.";
+                        resetSpo2Test();
+                    }
+                })
+                .catch(error => {
+                    document.getElementById("spo2-test-result").innerText = "❌ Server error!";
+                    resetSpo2Test();
+                });
+
+            function getSpo2Result(attempt = 0) {
+                fetch('/api/get-spo2')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            document.getElementById("spo2-result").innerText = `SpO₂: ${data.spo2}%`;
+                            document.getElementById("spo2-test-result").innerText = `✅ Measurement completed: ${data.spo2}%`;
+                            resetSpo2Test();
+                        } else {
+                            if (attempt < 15) {
+                                setTimeout(() => getSpo2Result(attempt + 1), 1000);
+                            } else {
+                                document.getElementById("spo2-test-result").innerText = "❌ Measurement failed. Please try again.";
+                                resetSpo2Test();
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        document.getElementById("spo2-test-result").innerText = "❌ Server error!";
+                        resetSpo2Test();
+                    });
+            }
+
+            function resetSpo2Test() {
+                document.getElementById("spo2-instructions").classList.add("hidden");
+                setTimeout(() => {
+                    document.getElementById("start-spo2-btn").disabled = false;
+                }, 3000);
+                spo2TestInProgress = false;
             }
         }
     </script>
 
 </body>
-
 </html>

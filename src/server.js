@@ -240,6 +240,87 @@ app.get('/api/get-bodytemp', (req, res) => {
     }
 });
 
+
+let spo2RequestActive = false;
+let lastMeasuredSpo2 = null;
+let pendingSpo2MeasurementForUser = null;
+
+// ✅ **Hasta Web Sayfası "SpO2 Testi Başlat" Dediğinde Çalışan Endpoint**
+app.post('/api/measure-spo2', (req, res) => {
+    if (!req.session.user) {
+        return res.json({ success: false, message: "Not logged in" });
+    } else {
+        pendingSpo2MeasurementForUser = req.session.user.username;
+    }
+
+    console.log("🔄 Web sayfası SpO₂ ölçümünü başlattı...");
+    
+    if (spo2RequestActive) {
+        return res.json({ success: false, message: "SpO₂ measurement already in progress." });
+    }
+
+    spo2RequestActive = true; // ✅ Testin başladığını kaydet
+    lastMeasuredSpo2 = null; // Önceki veriyi temizle
+
+    res.json({ success: true, message: "SpO₂ measurement started." });
+});
+
+// ✅ **RPi'nin SpO₂ ölçüm isteğini aldığı endpoint**
+app.get('/api/spo2', (req, res) => {
+    if (spo2RequestActive) {
+        res.json("spo2start"); // 📡 RPi'ye "SpO₂ ölçümüne başla" komutunu gönder
+    } else {
+        res.json({ success: false, message: "No active SpO₂ measurement request." });
+    }
+});
+
+// ✅ **RPi'nin ölçtüğü SpO₂ verisini kaydettiği endpoint**
+app.post('/api/store-spo2', async (req, res) => {
+    const { spo2 } = req.body; 
+
+    const patientUID = pendingSpo2MeasurementForUser; // 🔥 Hasta UID
+
+    console.log(`✅ SpO₂ ölçüldü: ${spo2}%, Hasta: ${patientUID}`);
+
+    if (!patientUID) {
+        console.error("❌ Hasta UID bulunamadı! Session boş olabilir.");
+        return res.status(400).json({ success: false, message: "Patient UID is missing." });
+    }
+
+    try {
+        const newTest = new TestResult({
+            thepatient: patientUID, 
+            result: spo2, 
+            testType: "spo2"
+        });
+
+        await newTest.save();
+        console.log("✅ SpO₂ test sonucu veritabanına kaydedildi!");
+
+        lastMeasuredSpo2 = spo2;
+        spo2RequestActive = false;
+
+        res.json({ success: true, message: "SpO₂ measurement recorded.", spo2: lastMeasuredSpo2 });
+    } catch (error) {
+        console.error("❌ SpO₂ test sonucu kaydedilirken hata oluştu:", error);
+        res.status(500).json({ success: false, message: "Database error." });
+    }
+});
+
+// ✅ **Hasta Web Sayfası, SpO₂ ölçüm sonucunu almak için burayı çağırır**
+app.get('/api/get-spo2', (req, res) => {
+    console.log("📡 Web sayfası SpO₂ ölçüm sonucunu sorguladı...");
+    if (lastMeasuredSpo2 !== null) {
+        console.log(`✅ Sunucudan dönen SpO₂: ${lastMeasuredSpo2}%`);
+        res.json({ success: true, spo2: lastMeasuredSpo2 });
+        lastMeasuredSpo2 = null; // Kullanıldıktan sonra sıfırla!
+    } else {
+        console.log("❌ Sunucuda SpO₂ ölçüm sonucu bulunamadı.");
+        res.json({ success: false, message: "SpO₂ measurement failed or not completed yet." });
+    }
+});
+
+
 // 📌 ✅ **Sağlık Çalışanı Kayıt (POST İşlemi)**
 app.post('/auth/register', async (req, res) => {
     const { username, fullname, password, healthcareCode } = req.body;
