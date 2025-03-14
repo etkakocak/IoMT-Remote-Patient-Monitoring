@@ -4,6 +4,7 @@ import time
 from machine import Pin, SPI
 import NFC_PN532 as nfc
 import bodytemp
+import spo2
 
 # 📡 **WiFi Bilgileri**
 WIFI_SSID = "Etkas S24 Ultra"
@@ -11,10 +12,15 @@ WIFI_PASSWORD = "etka12345"
 
 # 📡 **Web Sunucusunun IP Adresi**
 SERVER_IP = "192.168.3.181"
+
 SCAN_CARD_URL = f"http://{SERVER_IP}:5000/api/scan-card"
 SEND_TAG_URL = f"http://{SERVER_IP}:5000/api/send-tag"
+
 MEASURE_BODYTEMP_URL = f"http://{SERVER_IP}:5000/api/measure-bodytemp"
 STORE_BODYTEMP_URL = f"http://{SERVER_IP}:5000/api/store-bodytemp"
+
+SPO2_URL = f"http://{SERVER_IP}:5000/api/spo2"
+STORE_SPO2_URL = f"http://{SERVER_IP}:5000/api/store-spo2"
 
 # 📡 **WiFi'ye Bağlan**
 def connect_wifi():
@@ -66,10 +72,15 @@ while True:
     try:
         scanresponse = urequests.get(SCAN_CARD_URL)
         measresponse = urequests.get(MEASURE_BODYTEMP_URL)
+        spo2response = urequests.get(SPO2_URL)
+        
         scandata = scanresponse.json()
         measdata = measresponse.json()
+        spo2data = spo2response.json()
+        
         scanresponse.close()
         measresponse.close()
+        spo2response.close()
 
         if scandata == ('SCAN'):
             print("🔄 Web Sunucusu Tarama Başlattı!")
@@ -97,8 +108,23 @@ while True:
                 print("❌ Sıcaklık sensörü bulunamadı!")
             print("⏳ Test tamamlandı.")
             time.sleep(10)
+        
+        if spo2data == ('spo2start'):
+            print("Web Sunucusu spo2 Ölçümünü Başlattı!")
+            spo2_dat = spo2.measure_spo2()  # ✅ Vücut sıcaklığını ölç
+            if spo2_dat:
+                # 📡 **Sunucuya sıcaklık verisini gönder**
+                print(f"📡 Sunucuya {spo2_dat:.2f} gönderiliyor...")
+                response = urequests.post(STORE_SPO2_URL, json={"spo2": spo2_dat})
+                print("📡 Sunucudan gelen cevap:", response.text)
+                response.close()
+            else:
+                print("❌ sensör bulunamadı!")
+            print("⏳ Test tamamlandı.")
+            time.sleep(10)
 
     except Exception as e:
         print("❌ Hata:", e)
 
     time.sleep(1)  # 1 saniye bekle ve tekrar kontrol et
+
