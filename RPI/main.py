@@ -5,6 +5,7 @@ from machine import Pin, SPI
 import NFC_PN532 as nfc
 import bodytemp
 import spo2
+import EKG
 
 # 📡 **WiFi Bilgileri**
 WIFI_SSID = "Etkas S24 Ultra"
@@ -21,6 +22,9 @@ STORE_BODYTEMP_URL = f"http://{SERVER_IP}:5000/api/store-bodytemp"
 
 SPO2_URL = f"http://{SERVER_IP}:5000/api/spo2"
 STORE_SPO2_URL = f"http://{SERVER_IP}:5000/api/store-spo2"
+
+EKG_URL = f"http://{SERVER_IP}:5000/api/EKG"
+STORE_EKG_URL = f"http://{SERVER_IP}:5000/api/store-EKG"
 
 # 📡 **WiFi'ye Bağlan**
 def connect_wifi():
@@ -73,15 +77,18 @@ while True:
         scanresponse = urequests.get(SCAN_CARD_URL)
         measresponse = urequests.get(MEASURE_BODYTEMP_URL)
         spo2response = urequests.get(SPO2_URL)
+        ekgresponse = urequests.get(EKG_URL)
         
         scandata = scanresponse.json()
         measdata = measresponse.json()
         spo2data = spo2response.json()
+        ekgdata = ekgresponse.json()
         
         scanresponse.close()
         measresponse.close()
         spo2response.close()
-
+        ekgresponse.close()
+        
         if scandata == ('SCAN'):
             print("🔄 Web Sunucusu Tarama Başlattı!")
             # ✅ **Kart taramasını başlat**
@@ -111,11 +118,25 @@ while True:
         
         if spo2data == ('spo2start'):
             print("Web Sunucusu spo2 Ölçümünü Başlattı!")
-            spo2_dat = spo2.measure_spo2()  # ✅ Vücut sıcaklığını ölç
+            spo2_dat = spo2.measure_spo2()  
             if spo2_dat:
                 # 📡 **Sunucuya sıcaklık verisini gönder**
                 print(f"📡 Sunucuya {spo2_dat:.2f} gönderiliyor...")
                 response = urequests.post(STORE_SPO2_URL, json={"spo2": spo2_dat})
+                print("📡 Sunucudan gelen cevap:", response.text)
+                response.close()
+            else:
+                print("❌ sensör bulunamadı!")
+            print("⏳ Test tamamlandı.")
+            time.sleep(10)
+        
+        if ekgdata == ('EKGstart'):
+            print("Web Sunucusu EKG Ölçümünü Başlattı!")
+            EKG_dat = EKG.measure_ekg()  
+            if EKG_dat:
+                # 📡 **Sunucuya sıcaklık verisini gönder**
+                print(f"📡 Sunucuya gönderiliyor...")
+                response = urequests.post(STORE_EKG_URL, json={"EKG": EKG_dat})
                 print("📡 Sunucudan gelen cevap:", response.text)
                 response.close()
             else:
