@@ -18,13 +18,14 @@
     </nav>
 
     <section class="dashboard-container">
-        <h1>Welcome, <%= user.fullname %></h1>
+        <h1>Welcome, <%= user.fullname %>
+        </h1>
         <p>Here you can view your health data and recent monitoring.</p>
 
         <h2>Start Health Monitoring</h2>
 
         <!-- Vücut Sıcaklığı Testi -->
-        <button id="start-test-btn" onclick="startBodyTempTest()">Start Temperature Test</button>
+        <button id="start-test-btn" class="test-btn" onclick="startBodyTempTest()">Start Temperature Test</button>
 
         <div id="test-instructions" class="instructions hidden">
             <h3>📢 Please Hold the Temperature Sensor!</h3>
@@ -33,31 +34,55 @@
             <img src="/images/body-sensor.png" alt="Sensor on Body" class="instruction-image">
             <p id="countdown">40</p>
         </div>
-
         <p id="test-result" class="result"></p>
         <p id="temp-result"></p>
 
-        <!-- SpO2 Testi -->
-        <button id="start-spo2-btn" onclick="startSpo2Test()">Start SpO₂ Test</button>
-
+        <button id="start-spo2-btn" class="test-btn" onclick="startSpo2Test()">Start SpO₂ Test</button>
         <div id="spo2-instructions" class="instructions hidden">
             <h3>📢 Please Hold Your Finger on the SpO₂ Sensor!</h3>
             <p>Place your finger gently on the sensor and stay still.</p>
             <img src="/images/spo2-finger.png" alt="Finger on SpO₂ Sensor" class="instruction-image">
             <img src="/images/spo2-sensor.png" alt="SpO₂ Sensor Device" class="instruction-image">
         </div>
-
         <p id="spo2-result"></p>
         <p id="spo2-test-result"></p>
+
+        <button id="start-ekg-btn" class="test-btn" onclick="startEKGTest()">Start EKG Test</button>
+        <div id="ekg-instructions" class="instructions hidden">
+            <h3>📢 Please Keep Your Hands Still on the EKG Sensors!</h3>
+            <p>The test will take about 10-15 seconds.</p>
+            <img src="/images/ekg-hands.png" alt="Hands on EKG Sensors" class="instruction-image">
+            <img src="/images/ekg-device.png" alt="EKG Device" class="instruction-image">
+        </div>
+        <p id="ekg-test-result"></p>
+    </section>
+
+    <section class="history-container">
+        <h2>Test History</h2>
+        <table id="test-history">
+            <thead>
+                <tr>
+                    <th>Test Type</th>
+                    <th>Result</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td colspan="3">Loading...</td>
+                </tr>
+            </tbody>
+        </table>
     </section>
 
     <script>
         let tempTestInProgress = false;
         let spo2TestInProgress = false;
+        let ekgTestInProgress = false;
 
         // 📌 **Vücut Sıcaklığı Testi Başlat**
         function startBodyTempTest() {
-            if (tempTestInProgress) return; 
+            if (tempTestInProgress) return;
             tempTestInProgress = true;
             document.getElementById("test-instructions").classList.remove("hidden");
             document.getElementById("start-test-btn").disabled = true;
@@ -177,7 +202,105 @@
                 spo2TestInProgress = false;
             }
         }
+
+        function startEKGTest() {
+            if (ekgTestInProgress) return;
+            ekgTestInProgress = true;
+
+            document.getElementById("ekg-instructions").classList.remove("hidden");
+            document.getElementById("start-ekg-btn").disabled = true;
+            document.getElementById("ekg-test-result").innerText = "⏳ EKG measurement in progress...";
+
+            fetch('/api/measure-ekg', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        getEKGResult();
+                    } else {
+                        document.getElementById("ekg-test-result").innerText = "❌ EKG Measurement could not be started.";
+                        resetEKGTest();
+                    }
+                })
+                .catch(error => {
+                    document.getElementById("ekg-test-result").innerText = "❌ Server error!";
+                    resetEKGTest();
+                });
+
+            function getEKGResult(attempt = 0) {
+                fetch('/api/get-ekg')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            document.getElementById("ekg-test-result").innerText = "✅ EKG measurement completed! Check your test records.";
+                            resetEKGTest();
+                        } else {
+                            if (attempt < 30) { // 🔥 **30 KEZ deneyecek, 30 saniyeye kadar bekleyecek**
+                                setTimeout(() => getEKGResult(attempt + 1), 1000);
+                            } else {
+                                document.getElementById("ekg-test-result").innerText = "❌ EKG Measurement failed. Please try again.";
+                                resetEKGTest();
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        document.getElementById("ekg-test-result").innerText = "❌ Server error!";
+                        resetEKGTest();
+                    });
+            }
+
+            function resetEKGTest() {
+                document.getElementById("ekg-instructions").classList.add("hidden");
+                setTimeout(() => {
+                    document.getElementById("start-ekg-btn").disabled = false;
+                }, 3000);
+                ekgTestInProgress = false;
+            }
+        }
+
+        function loadTestHistory() {
+            fetch('/api/test-history')
+                .then(response => response.json())
+                .then(data => {
+                    const tableBody = document.querySelector("#test-history tbody");
+                    tableBody.innerHTML = ""; // Önce temizle
+
+                    if (data.success && data.history.length > 0) {
+                        data.history.forEach(test => {
+                            let formattedTestType = test.testType.toUpperCase(); // Varsayılan
+                            let formattedResult = test.result; // Varsayılan
+
+                            // 🔥 Test tipine göre uygun formatı belirle
+                            if (formattedTestType === "SPO2") {
+                                formattedTestType = "Oxygen Saturation SpO₂";
+                                formattedResult = `${test.result}%`;
+                            } else if (formattedTestType === "BODYTEMP") {
+                                formattedTestType = "Body Temperature";
+                                formattedResult = `${test.result}°C`;
+                            }
+
+                            const row = document.createElement("tr");
+                            row.innerHTML = `
+                        <td>${formattedTestType}</td>
+                        <td>${formattedResult}</td>
+                        <td>${new Date(test.createdAt).toLocaleString()}</td>
+                    `;
+                            tableBody.appendChild(row);
+                        });
+                    } else {
+                        tableBody.innerHTML = `<tr><td colspan="3">No test history found.</td></tr>`;
+                    }
+                })
+                .catch(error => {
+                    console.error("❌ Test history load error:", error);
+                    document.querySelector("#test-history tbody").innerHTML = `<tr><td colspan="3">Error loading history.</td></tr>`;
+                });
+        }
+
+
+        // 📌 **Sayfa yüklendiğinde test geçmişini getir**
+        document.addEventListener("DOMContentLoaded", loadTestHistory);
     </script>
 
 </body>
+
 </html>

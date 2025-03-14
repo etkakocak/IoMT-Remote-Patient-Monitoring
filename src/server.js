@@ -6,6 +6,7 @@ import session from 'express-session';
 import flash from 'connect-flash';
 import User from './user.js';
 import TestResult from './testresult.js';
+import EKGResult from './EKGresult.js';
 
 dotenv.config();
 connectDB();
@@ -109,6 +110,25 @@ app.post('/auth/patient-login', async (req, res) => {
     } catch (error) {
         console.error("❌ Patient login error:", error);
         res.status(500).json({ success: false, message: "Server error." });
+    }
+});
+
+// ✅ **Hasta Test Geçmişini Getirme**
+app.get('/api/test-history', async (req, res) => {
+    if (!req.session.user) {
+        return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    try {
+        const patientUID = req.session.user.username;
+
+        // **Sadece bu hastaya ait testleri getiriyoruz**
+        const history = await TestResult.find({ thepatient: patientUID }).sort({ createdAt: -1 });
+
+        res.json({ success: true, history });
+    } catch (error) {
+        console.error("❌ Test geçmişi getirilirken hata oluştu:", error);
+        res.status(500).json({ success: false, message: "Database error." });
     }
 });
 
@@ -240,7 +260,6 @@ app.get('/api/get-bodytemp', (req, res) => {
     }
 });
 
-
 let spo2RequestActive = false;
 let lastMeasuredSpo2 = null;
 let pendingSpo2MeasurementForUser = null;
@@ -319,6 +338,87 @@ app.get('/api/get-spo2', (req, res) => {
         res.json({ success: false, message: "SpO₂ measurement failed or not completed yet." });
     }
 });
+
+let ekgRequestActive = false;
+let lastMeasuredEKG = null;
+let pendingEKGForUser = null;
+
+// ✅ **Hasta Web Sayfası "Başlat" Dediğinde Çalışan Endpoint**
+app.post('/api/measure-ekg', (req, res) => {
+    if (!req.session.user) {
+        return res.json({ success: false, message: "Not logged in" });
+    } else {
+        pendingEKGForUser = req.session.user.username;
+    }
+
+    console.log("🔄 Web sayfası EKG ölçümünü başlattı...");
+
+    if (ekgRequestActive) {
+        return res.json({ success: false, message: "EKG measurement already in progress." });
+    }
+
+    ekgRequestActive = true; 
+    lastMeasuredEKG = null; 
+
+    res.json({ success: true, message: "EKG measurement started." });
+});
+
+// ✅ **RPi'nin ölçüm isteğini aldığı endpoint**
+app.get('/api/EKG', (req, res) => {
+    if (ekgRequestActive) {
+        res.json("EKGstart"); 
+    } else {
+        res.json({ success: false, message: "No active EKG request." });
+    }
+});
+
+// ✅ **RPi'nin EKG verisini kaydettiği endpoint**
+app.post('/api/store-EKG', async (req, res) => {
+    const { EKG } = req.body;  
+    const patientUID = pendingEKGForUser; // 🔥 **Session'dan UID al**
+
+    console.log("✅ Gelen veri:", req.body);
+    console.log(`✅ EKG verisi alındı. Hasta: ${patientUID}`);
+
+    if (!patientUID) {
+        console.error("❌ Hasta UID bulunamadı! Session boş olabilir.");
+        return res.status(400).json({ success: false, message: "Patient UID is missing." });
+    }
+
+    try {
+        const newTest = new EKGResult({
+            thepatient: patientUID, 
+            result: EKG, 
+            testType: "ekg"
+        });
+
+        await newTest.save();
+        console.log("✅ EKG verisi veritabanına kaydedildi!");
+
+        lastMeasuredEKG = EKG;
+        ekgRequestActive = false;
+
+        res.json({ success: true, message: "EKG recorded." });
+    } catch (error) {
+        console.error("❌ EKG verisi kaydedilirken hata oluştu:", error);
+        res.status(500).json({ success: false, message: "Database error." });
+    }
+});
+
+// ✅ **Hasta Web Sayfası, EKG ölçüm sonucunu almak için burayı çağırır**
+app.get('/api/get-ekg', (req, res) => {
+    console.log("📡 Web sayfası EKG sonucunu sorguladı...");
+    
+    if (lastMeasuredEKG !== null) {
+        console.log("✅ Sunucudan dönen EKG verisi:", lastMeasuredEKG);
+        res.json({ success: true, ekg: lastMeasuredEKG });
+        lastMeasuredEKG = null; // Kullanıldıktan sonra sıfırla!
+    } else {
+        console.log("❌ Sunucuda EKG sonucu bulunamadı, tekrar dene...");
+        res.json({ success: false, message: "EKG measurement not ready yet." });
+    }
+});
+
 
 
 // 📌 ✅ **Sağlık Çalışanı Kayıt (POST İşlemi)**

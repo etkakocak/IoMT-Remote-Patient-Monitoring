@@ -26,7 +26,7 @@
 }
 
 /* Buttons */
-.btn-test {
+.test-btn {
     background: #007BFF;
     color: white;
     padding: 10px 20px;
@@ -37,10 +37,6 @@
     margin-top: 20px;
     display: block;
     width: 100%;
-}
-
-.btn-test:hover {
-    background: #0056b3;
 }
 
 /* Instructions Box */
@@ -71,4 +67,46 @@
     font-size: 18px;
     font-weight: bold;
     margin-top: 20px;
+}
+
+/* 📌 Test Geçmişi Bölümü */
+.history-container {
+    margin-top: 30px;
+    padding: 20px;
+    background: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+.history-container h2 {
+    margin-bottom: 15px;
+    font-size: 1.5rem;
+    color: #333;
+}
+
+/* 📌 Test Geçmişi Tablosu */
+#test-history {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+#test-history thead {
+    background: #007bff;
+    color: white;
+}
+
+#test-history th, #test-history td {
+    padding: 12px;
+    border: 1px solid #ddd;
+    text-align: center;
+}
+
+#test-history tbody tr:nth-child(even) {
+    background: #f9f9f9;
+}
+
+#test-history tbody tr:hover {
+    background: #e9f5ff;
 }
