@@ -7,6 +7,8 @@ import flash from 'connect-flash';
 import User from './user.js';
 import TestResult from './testresult.js';
 import EKGResult from './EKGresult.js';
+import BloodPressure from "./bloodpressure.js";
+import { spawn } from "child_process";
 
 dotenv.config();
 connectDB();
@@ -447,6 +449,149 @@ app.get('/api/get-latest-ekg', async (req, res) => {
     }
 });
 
+let bpDataBuffer = [];
+let pendingBPForUser = null;
+let bpRequestActive = false; // ✅ BP testi aktif mi?
+let latestPTT = null;
+
+// ✅ **RPi BP Ölçüm İsteğini Aldığında Yanıt Veren Endpoint**
+app.get("/api/BP", (req, res) => {
+    if (bpRequestActive) {
+        console.log("📡 RPi BP ölçümünü başlatıyor...");
+        res.json("BPstart"); // 🔥 **RPi'ye "BP ölçümünü başlat" komutu gidiyor**
+    } else {
+        res.json({ success: false, message: "No active BP request." });
+    }
+});
+
+// ✅ **Hasta web sayfası BP ölçümü başlattığında çağrılan endpoint**
+app.post("/api/BP", (req, res) => {
+    if (!req.session.user) {
+        return res.json({ success: false, message: "Not logged in" });
+    }
+
+    if (bpRequestActive) {
+        return res.json({ success: false, message: "BP measurement already in progress." });
+    }
+
+    pendingBPForUser = req.session.user.username;
+    bpRequestActive = true; // **Test başladı**
+
+    console.log("🔄 BP ölçümü başlatıldı...");
+    res.json({ success: true, message: "BP measurement started." });
+});
+
+// ✅ **RPi BP verisi gönderiyor**
+app.post("/api/live-bp", async (req, res) => {
+    const bpData = req.body;
+
+    if (!bpData || !bpData.timestamp || !bpData.max30102_ir || !bpData.icquanzx) {
+        return res.status(400).json({ success: false, message: "Invalid BP data format" });
+    }
+
+    bpDataBuffer.push(bpData);
+
+    if (bpDataBuffer.length >= 200) {  // **Yeterli veri geldi mi?**
+        console.log("✅ 200 veri alındı, PTT hesaplanıyor...");
+        
+        try {
+            const result = await processBPData(bpDataBuffer);  // ✅ **Python script tamamlanana kadar bekle**
+            console.log("✅ BP Testi başarıyla tamamlandı");
+        } catch (err) {
+            console.error("❌ BP testi başarısız:", err.message);
+        }
+
+        bpRequestActive = false;  // ✅ **Test tamamlandı**
+        pendingBPForUser = null;  // ✅ **Hasta bilgisi sıfırlandı**
+        bpDataBuffer = []; // ✅ **Listeyi temizle**
+    }
+
+    res.json({ success: true, message: "BP data received" });
+});
+
+// date: new Date(latestBP.createdAt).toLocaleString()
+function processBPData(sensorData) {
+    return new Promise((resolve, reject) => {
+        console.log("📡 Python scriptine gönderilen veri:", JSON.stringify(sensorData));
+
+        const pythonProcess = spawn("python", ["src/calculate_ptt.py"]);
+
+        pythonProcess.stdin.write(JSON.stringify(sensorData));
+        pythonProcess.stdin.end();
+
+        let resultData = "";
+
+        pythonProcess.stdout.on("data", (data) => {
+            console.log("📡 Python scriptinden gelen veri:", data.toString());
+            resultData += data.toString();
+        });
+
+        pythonProcess.stderr.on("data", (data) => {
+            console.error(`❌ Python Hatası: ${data}`);
+        });
+
+        pythonProcess.on("close", async () => {
+            try {
+                console.log("📡 Alınan Ham Veri:", resultData); // ✅ JSON ham verisini logla
+                const output = JSON.parse(resultData);
+            
+                // 🚨 Eğer JSON bir nesne değilse, hata ver
+                if (typeof output !== "object" || output === null) {
+                    throw new Error("Invalid JSON format from Python script.");
+                }
+            
+                console.log("✅ JSON Çıktısı:", output);
+            
+                if (!output.success) {  // ✅ **Burada success kontrolü doğru yapılıyor**
+                    console.warn(`⚠️ PTT hesaplanamadı: ${output.error}`);
+                    return reject(new Error(output.error || "PTT ölçülemedi"));
+                }
+            
+                const patientUID = pendingBPForUser;
+                if (!patientUID) {
+                    console.error("❌ Hasta UID bulunamadı!");
+                    return reject(new Error("Hasta bilgisi eksik."));
+                }
+            
+                // ✅ **MongoDB'ye kaydet**
+                const newBPRecord = new BloodPressure({
+                    thepatient: patientUID,
+                    PTT: output.PTT,
+                    date: new Date().toLocaleString()
+                });
+            
+                await newBPRecord.save();
+                console.log(`✅ PTT kaydedildi: ${output.PTT} ms`);
+                latestPTT = output.PTT;
+                return resolve({ success: true, PTT: output.PTT });
+            
+            } catch (err) {
+                console.error("❌ JSON Parse Hatası:", err.message);
+                console.error("📡 Alınan Ham Veri:", resultData); // ✅ JSON ham verisini logla
+                return reject(new Error("PTT hesaplama hatası (JSON okunamadı)"));
+            }            
+        });
+    });
+}
+
+// ✅ **Son BP ölçümünü getir**
+app.get("/api/get-latest-bp", async (req, res) => {
+    if (!req.session.user) {
+        return res.status(401).json({ success: false, message: "Not logged in" });
+    }
+
+    if (bpRequestActive) { 
+        return res.json({ success: false, message: "BP measurement in progress." });
+    }
+
+    if (latestPTT != null) { 
+        console.log(`✅ PTT kaydedildi: ${latestPTT} ms`);
+        res.json({ success: true });
+    } else {
+        console.error("❌ Error fetching BP data:");
+        res.status(500).json({ success: false, message: "BP measurement error. Try again." });
+    }
+});
 
 
 // 📌 ✅ **Sağlık Çalışanı Kayıt (POST İşlemi)**

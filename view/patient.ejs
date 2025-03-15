@@ -55,6 +55,15 @@
             <img src="/images/ekg-device.png" alt="EKG Device" class="instruction-image">
         </div>
         <p id="ekg-test-result"></p>
+
+        <button id="start-bp-btn" class="test-btn" onclick="startBPTest()">Start Blood Pressure Test</button>
+
+        <div id="bp-instructions" class="instructions hidden">
+            <h3>📢 Keep your hand steady on the sensors!</h3>
+            <p>The test will take about 30 seconds. Please remain still.</p>
+            <img src="/images/bp-sensor.png" alt="Blood Pressure Sensor" class="instruction-image">
+        </div>
+        <p id="bp-test-result"></p>
     </section>
 
     <section class="history-container">
@@ -272,6 +281,68 @@
                 ekgTestInProgress = false;
             }
         }
+
+        let bpTestInProgress = false;
+
+        function startBPTest() {
+            if (bpTestInProgress) return;
+            bpTestInProgress = true;
+
+            document.getElementById("bp-instructions").classList.remove("hidden");
+            document.getElementById("start-bp-btn").disabled = true;
+            document.getElementById("bp-test-result").innerText = "⏳ Measuring blood pressure... Please wait.";
+
+            fetch('/api/BP', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        getBPResult(); // ✅ **Ölçüm başladığında sonucu beklemeye başla**
+                    } else {
+                        document.getElementById("bp-test-result").innerText = "❌ BP Measurement could not be started.";
+                        resetBPTest();
+                    }
+                })
+                .catch(error => {
+                    document.getElementById("bp-test-result").innerText = "❌ Server error!";
+                    resetBPTest();
+                });
+
+            function getBPResult(attempt = 0) {
+                fetch('/api/get-latest-bp')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            document.getElementById("bp-test-result").innerText = "✅ BP measurement completed. Check your test records.";
+                            resetBPTest();
+                        } else {
+                            if (data.message === "BP measurement in progress.") {
+                                if (attempt < 30) { // 30 saniyeye kadar bekle
+                                    setTimeout(() => getBPResult(attempt + 1), 1000);
+                                } else {
+                                    document.getElementById("bp-test-result").innerText = "❌ BP Measurement timed out. Please try again.";
+                                    resetBPTest();
+                                }
+                            } else {
+                                document.getElementById("bp-test-result").innerText = "❌ " + data.message;
+                                resetBPTest();
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        document.getElementById("bp-test-result").innerText = "❌ Server error!";
+                        resetBPTest();
+                    });
+            }
+
+            function resetBPTest() {
+                document.getElementById("bp-instructions").classList.add("hidden");
+                setTimeout(() => {
+                    document.getElementById("start-bp-btn").disabled = false;
+                }, 3000);
+                bpTestInProgress = false;
+            }
+        }
+
 
         function loadTestHistory() {
             fetch('/api/test-history')
