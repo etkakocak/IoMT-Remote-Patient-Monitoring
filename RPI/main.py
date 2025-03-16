@@ -6,6 +6,7 @@ import NFC_PN532 as nfc
 import bodytemp
 import spo2
 import EKG
+import bp_live
 
 # 📡 **WiFi Bilgileri**
 WIFI_SSID = "Etkas S24 Ultra"
@@ -25,6 +26,9 @@ STORE_SPO2_URL = f"http://{SERVER_IP}:5000/api/store-spo2"
 
 EKG_URL = f"http://{SERVER_IP}:5000/api/EKG"
 STORE_EKG_URL = f"http://{SERVER_IP}:5000/api/store-EKG"
+
+BP_URL = f"http://{SERVER_IP}:5000/api/BP"
+STORE_BP_URL = f"http://{SERVER_IP}:5000/api/store-BP"
 
 # 📡 **WiFi'ye Bağlan**
 def connect_wifi():
@@ -78,16 +82,19 @@ while True:
         measresponse = urequests.get(MEASURE_BODYTEMP_URL)
         spo2response = urequests.get(SPO2_URL)
         ekgresponse = urequests.get(EKG_URL)
+        bpresponse = urequests.get(BP_URL)
         
         scandata = scanresponse.json()
         measdata = measresponse.json()
         spo2data = spo2response.json()
         ekgdata = ekgresponse.json()
+        bpdata = bpresponse.json()
         
         scanresponse.close()
         measresponse.close()
         spo2response.close()
         ekgresponse.close()
+        bpresponse.close()
         
         if scandata == ('SCAN'):
             print("🔄 Web Sunucusu Tarama Başlattı!")
@@ -141,6 +148,12 @@ while True:
                 response.close()
             else:
                 print("❌ sensör bulunamadı!")
+            print("⏳ Test tamamlandı.")
+            time.sleep(10)
+        
+        if bpdata == ('BPstart'):
+            print("Web Sunucusu BP Ölçümünü Başlattı!")
+            bp_live.start_bp_measurement()  # ✅ **BP Ölçümünü Başlat**
             print("⏳ Test tamamlandı.")
             time.sleep(10)
 
