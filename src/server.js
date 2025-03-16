@@ -593,6 +593,61 @@ app.get("/api/get-latest-bp", async (req, res) => {
     }
 });
 
+// ✅ **Kullanıcının tüm PTT verilerini döndüren endpoint**
+app.get("/api/get-patient-ptt", async (req, res) => {
+    if (!req.session.user) {
+        return res.status(401).json({ success: false, message: "Not logged in" });
+    }
+
+    try {
+        const patientPTT = await BloodPressure.find({ thepatient: req.session.user.username })
+            .sort({ createdAt: -1 }) // En son PTT değerleri önce gelsin
+        
+        if (!patientPTT.length) {
+            return res.json({ success: false, message: "No PTT data found." });
+        }
+
+        res.json({ success: true, pttRecords: patientPTT });
+    } catch (error) {
+        console.error("❌ Error fetching PTT data:", error);
+        res.status(500).json({ success: false, message: "Database error." });
+    }
+});
+
+// ✅ **Kullanıcının kişisel bilgilerini döndüren endpoint**
+app.get("/api/get-patient-info", async (req, res) => {
+    if (!req.session.user) {
+        return res.status(401).json({ success: false, message: "Not logged in" });
+    }
+
+    try {
+        const patientInfo = await User.findOne({ username: req.session.user.username });
+
+        if (!patientInfo) {
+            return res.json({ success: false, message: "Patient info not found." });
+        }
+
+        // **Sadece gerekli bilgileri gönderelim**
+        res.json({ 
+            success: true, 
+            patient: {
+                age: patientInfo.age,
+                gender: patientInfo.gender,
+                smoking: patientInfo.smoking,
+                exercise: patientInfo.exercise,
+                hypertension: patientInfo.hypertension,
+                bloodpressure: patientInfo.bloodpressure
+            }
+        });
+
+    } catch (error) {
+        console.error("❌ Error fetching patient info:", error);
+        res.status(500).json({ success: false, message: "Database error." });
+    }
+});
+
+
+
 
 // 📌 ✅ **Sağlık Çalışanı Kayıt (POST İşlemi)**
 app.post('/auth/register', async (req, res) => {

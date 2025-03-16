@@ -149,3 +149,20 @@
     margin-bottom: 10px;
     font-size: 14px;
 }
+
+#bp-history-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+#bp-history-table th, #bp-history-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: center;
+}
+
+#bp-history-table th {
+    background-color: #f2f2f2;
+    font-weight: bold;
+}

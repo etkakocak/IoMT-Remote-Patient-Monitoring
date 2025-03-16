@@ -100,6 +100,23 @@
         </div>
     </section>
 
+    <section class="history-container">
+        <h2>Blood Pressure History</h2>
+        <table id="bp-history-table">
+            <thead>
+                <tr>
+                    <th>Test Time</th>
+                    <th>Blood Pressure</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td colspan="2">Loading...</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
     <script>
         let tempTestInProgress = false;
         let spo2TestInProgress = false;
@@ -386,10 +403,43 @@
 
         // 📌 **Sayfa yüklendiğinde test geçmişini getir**
         document.addEventListener("DOMContentLoaded", loadTestHistory);
+
+        function loadBloodPressureHistory() {
+            fetch('/api/get-patient-ptt')
+                .then(response => response.json())
+                .then(data => {
+                    const tableBody = document.querySelector("#bp-history-table tbody");
+                    tableBody.innerHTML = ""; // Önce tabloyu temizle
+
+                    if (data.success && data.pttRecords.length > 0) {
+                        data.pttRecords.forEach(record => {
+                            const sbp = calculateSBP(record.PTT, userA0, userA1, userA2);
+                            const formattedDate = new Date(record.createdAt).toISOString().replace("T", " ").substring(0, 19);
+
+                            const row = document.createElement("tr");
+                            row.innerHTML = `
+                            <td>${formattedDate}</td>
+                            <td>${Math.round(sbp)} mmHg</td>
+                        `;
+                            tableBody.appendChild(row);
+                        });
+                    } else {
+                        tableBody.innerHTML = `<tr><td colspan="2">No blood pressure data found.</td></tr>`;
+                    }
+                })
+                .catch(error => {
+                    console.error("❌ Error loading BP history:", error);
+                    document.querySelector("#bp-history-table tbody").innerHTML = `<tr><td colspan="2">Error loading history.</td></tr>`;
+                });
+        }
+
+        document.addEventListener("DOMContentLoaded", loadBloodPressureHistory);
+
     </script>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="/js/EKG.js"></script>
+    <script src="/js/bloodPressure.js"></script>
 
 </body>
 
