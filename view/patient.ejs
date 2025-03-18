@@ -24,7 +24,6 @@
 
         <h2>Start Health Monitoring</h2>
 
-        <!-- Vücut Sıcaklığı Testi -->
         <button id="start-test-btn" class="test-btn" onclick="startBodyTempTest()">Start Temperature Test</button>
 
         <div id="test-instructions" class="instructions hidden">
@@ -47,7 +46,7 @@
 
         <button id="start-ekg-btn" class="test-btn" onclick="startEKGTest()">Start EKG Test</button>
         <div id="ekg-instructions" class="instructions hidden">
-            <h3>📢 Please Keep Your Hands Still on the EKG Sensors!</h3>
+            <h3>📢 Please Keep Your Fingers Still on the EKG Sensor!</h3>
             <p>The test will take about 10-15 seconds.</p>
             <img src="/images/ekg.png" alt="Hands on EKG Sensors" class="instruction-image">
         </div>
@@ -56,8 +55,8 @@
         <button id="start-bp-btn" class="test-btn" onclick="startBPTest()">Start Blood Pressure Test</button>
 
         <div id="bp-instructions" class="instructions hidden">
-            <h3>📢 Keep your hand steady on the sensors!</h3>
-            <p>The test will take about 30 seconds. Please remain still.</p>
+            <h3>📢 Keep your hands steady on the sensors!</h3>
+            <p>The test will take about 30 seconds.</p>
             <img src="/images/bloodpress.png" alt="Blood Pressure Sensor" class="instruction-image">
         </div>
         <p id="bp-test-result"></p>
@@ -119,7 +118,6 @@
         let spo2TestInProgress = false;
         let ekgTestInProgress = false;
 
-        // 📌 **Vücut Sıcaklığı Testi Başlat**
         function startBodyTempTest() {
             if (tempTestInProgress) return;
             tempTestInProgress = true;
@@ -187,7 +185,6 @@
             }
         }
 
-        // 📌 **SpO₂ Testi Başlat**
         function startSpo2Test() {
             if (spo2TestInProgress) return;
             spo2TestInProgress = true;
@@ -273,7 +270,7 @@
                             document.getElementById("ekg-test-result").innerText = "✅ EKG measurement completed! Check your test records.";
                             resetEKGTest();
                         } else {
-                            if (attempt < 30) { // 🔥 **30 KEZ deneyecek, 30 saniyeye kadar bekleyecek**
+                            if (attempt < 30) { 
                                 setTimeout(() => getEKGResult(attempt + 1), 1000);
                             } else {
                                 document.getElementById("ekg-test-result").innerText = "❌ EKG Measurement failed. Please try again.";
@@ -310,7 +307,7 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        getBPResult(); // ✅ **Ölçüm başladığında sonucu beklemeye başla**
+                        getBPResult(); 
                     } else {
                         document.getElementById("bp-test-result").innerText = "❌ BP Measurement could not be started.";
                         resetBPTest();
@@ -330,7 +327,7 @@
                             resetBPTest();
                         } else {
                             if (data.message === "BP measurement in progress.") {
-                                if (attempt < 30) { // 30 saniyeye kadar bekle
+                                if (attempt < 30) { 
                                     setTimeout(() => getBPResult(attempt + 1), 1000);
                                 } else {
                                     document.getElementById("bp-test-result").innerText = "❌ BP Measurement timed out. Please try again.";
@@ -363,14 +360,13 @@
                 .then(response => response.json())
                 .then(data => {
                     const tableBody = document.querySelector("#test-history tbody");
-                    tableBody.innerHTML = ""; // Önce temizle
+                    tableBody.innerHTML = ""; 
 
                     if (data.success && data.history.length > 0) {
                         data.history.forEach(test => {
-                            let formattedTestType = test.testType.toUpperCase(); // Varsayılan
-                            let formattedResult = test.result; // Varsayılan
+                            let formattedTestType = test.testType.toUpperCase(); 
+                            let formattedResult = test.result; 
 
-                            // 🔥 Test tipine göre uygun formatı belirle
                             if (formattedTestType === "SPO2") {
                                 formattedTestType = "Oxygen Saturation SpO₂";
                                 formattedResult = `${test.result}%`;
@@ -398,7 +394,6 @@
         }
 
 
-        // 📌 **Sayfa yüklendiğinde test geçmişini getir**
         document.addEventListener("DOMContentLoaded", loadTestHistory);
 
         function loadBloodPressureHistory() {
@@ -406,7 +401,7 @@
                 .then(response => response.json())
                 .then(data => {
                     const tableBody = document.querySelector("#bp-history-table tbody");
-                    tableBody.innerHTML = ""; // Önce tabloyu temizle
+                    tableBody.innerHTML = ""; 
 
                     if (data.success && data.pttRecords.length > 0) {
                         data.pttRecords.forEach(record => {
