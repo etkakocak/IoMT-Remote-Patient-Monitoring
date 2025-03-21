@@ -1,4 +1,3 @@
-/* Sayfayı Dikey Ortalamak İçin */
 .auth-container {
     background: white;
     padding: 25px;
@@ -6,22 +5,19 @@
     box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
     width: 350px;
     text-align: center;
-    margin: 50px auto;  /* Sayfanın ortasında olmasını sağlar */
+    margin: 50px auto;  
 }
 
-/* Başlık */
 .auth-container h1 {
     margin-bottom: 20px;
     color: #333;
 }
 
-/* Form Stili */
 .auth-container form {
     display: flex;
     flex-direction: column;
 }
 
-/* Input Alanları */
 .auth-container label {
     text-align: left;
     font-weight: bold;
@@ -37,7 +33,6 @@
     font-size: 14px;
 }
 
-/* Giriş Butonu */
 .auth-container button {
     padding: 12px;
     background: #007bff;
@@ -54,7 +49,6 @@
     background: #0056b3;
 }
 
-/* Linkler */
 .auth-container p {
     font-size: 14px;
     margin-top: 10px;
