@@ -9,7 +9,7 @@ document.addEventListener("DOMContentLoaded", function () {
             .then(response => response.json())
             .then(data => {
                 if (data.success && data.ekgResults.length > 0) {
-                    ekgSelect.innerHTML = ""; // Seçim listesini temizle
+                    ekgSelect.innerHTML = ""; 
                     data.ekgResults.forEach(test => {
                         const option = document.createElement("option");
                         option.value = JSON.stringify(test.ekg);
@@ -21,14 +21,14 @@ document.addEventListener("DOMContentLoaded", function () {
                 }
             })
             .catch(error => {
-                console.error("❌ EKG history load error:", error);
+                console.error("EKG history load error:", error);
                 ekgSelect.innerHTML = `<option value="">Error loading EKG history</option>`;
             });
     }
 
     function updateChart(ekgData) {
         if (ekgChart) {
-            ekgChart.destroy(); // Eski grafiği temizle
+            ekgChart.destroy(); 
         }
 
         ekgChart = new Chart(ctx, {
@@ -42,7 +42,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     borderWidth: 2,
                     fill: false,
                     pointRadius: 0,
-                    tension: 0, // Keskin geçişler için
+                    tension: 0, 
                 }]
             },
             options: {

@@ -1,36 +1,34 @@
 async function fetchPatientData() {
     try {
-        // 📡 **Hastanın kişisel bilgilerini al**
+        // get patient info
         const patientResponse = await fetch('/api/get-patient-info');
         const patientData = await patientResponse.json();
 
         if (!patientData.success) {
-            console.error("❌ Could not fetch patient info.");
+            console.error("Could not fetch patient info.");
             return;
         }
 
-        // 📡 **Hastanın tüm PTT verilerini al**
+        // get PTT values
         const pttResponse = await fetch('/api/get-patient-ptt');
         const pttData = await pttResponse.json();
 
         if (!pttData.success || pttData.pttRecords.length === 0) {
-            console.error("❌ No PTT data available.");
+            console.error("No PTT data available.");
             return;
         }
 
-        // 🔹 **Parametreleri hesapla**
         const { age, gender, smoking, exercise, hypertension, bloodpressure } = patientData.patient;
         const { a0, a1, a2 } = calculateParameters(age, gender, smoking, exercise, hypertension, bloodpressure);
 
-        // 📌 **PTT geçmişi tablosunu güncelle**
         updateBPTable(pttData.pttRecords, a0, a1, a2);
 
     } catch (error) {
-        console.error("❌ Error fetching data:", error);
+        console.error("Error fetching data:", error);
     }
 }
 
-// 📌 **a0, a1, a2 parametre hesaplama fonksiyonu**
+// calculate a0, a1, a2 parameters used in SBP algorithm
 function calculateParameters(age, gender, smoking, exercise, hypertension, bp_status) {
     let a0 = 105, a1 = 40, a2 = 0.005;
 
@@ -50,21 +48,20 @@ function calculateParameters(age, gender, smoking, exercise, hypertension, bp_st
     return { a0, a1, a2 };
 }
 
-// 📌 **SBP hesaplama fonksiyonu**
+// Systolic Blood Pressure algorithm
 function calculateSBP(ptt, a0, a1, a2) {
     // return Math.round(a0 + Math.sqrt(a1 + (a2 / (ptt ** 2))));
     const sbp = a0 + a1 * Math.exp(-a2 * ptt);
     return sbp.toFixed(2);
 }
 
-// 📌 **Tansiyon geçmişi tablosunu güncelleme fonksiyonu**
 function updateBPTable(pttRecords, a0, a1, a2) {
     const tableBody = document.querySelector("#bp-history-table tbody");
-    tableBody.innerHTML = ""; // Önce tabloyu temizle
+    tableBody.innerHTML = ""; 
 
     pttRecords.forEach(record => {
-        const sbp = calculateSBP(record.PTT, a0, a1, a2); // 🔥 Her PTT için ayrı hesaplama
-        const formattedDate = new Date(record.createdAt).toLocaleString(); // 🔥 Doğru tarih formatı
+        const sbp = calculateSBP(record.PTT, a0, a1, a2); 
+        const formattedDate = new Date(record.createdAt).toLocaleString(); 
 
         const row = document.createElement("tr");
         row.innerHTML = `
@@ -75,6 +72,4 @@ function updateBPTable(pttRecords, a0, a1, a2) {
     });
 }
 
-
-// **Sayfa yüklendiğinde çalıştır**
 document.addEventListener("DOMContentLoaded", fetchPatientData);

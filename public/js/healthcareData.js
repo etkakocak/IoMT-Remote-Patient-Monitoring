@@ -22,7 +22,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 }
             })
             .catch(error => {
-                console.error("❌ EKG history load error:", error);
+                console.error("EKG history load error:", error);
                 ekgSelect.innerHTML = `<option value="">Error loading EKG history</option>`;
             });
     });
@@ -105,7 +105,7 @@ document.getElementById("patient-select").addEventListener("change", async funct
         const patientData = await patientResponse.json();
 
         if (!patientData.success) {
-            console.error("❌ Could not fetch patient info.");
+            console.error("Could not fetch patient info.");
             return;
         }
 
@@ -113,7 +113,7 @@ document.getElementById("patient-select").addEventListener("change", async funct
         const pttData = await pttResponse.json();
 
         if (!pttData.success || pttData.pttRecords.length === 0) {
-            console.error("❌ No PTT data available.");
+            console.error("No PTT data available.");
             return;
         }
 
@@ -123,7 +123,7 @@ document.getElementById("patient-select").addEventListener("change", async funct
         updateBPTable(pttData.pttRecords, a0, a1, a2);
 
     } catch (error) {
-        console.error("❌ Error fetching data:", error);
+        console.error("Error fetching data:", error);
     }
 });
 
