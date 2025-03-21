@@ -6,7 +6,7 @@ const userSchema = new mongoose.Schema({
     password: { type: String },
     fullname: { type: String, required: true },
     role: { type: String, enum: ['healthcare', 'patient'], required: true },
-    uid: { type: String, unique: true, sparse: true }, // Hasta için RFID UID'si (Opsiyonel)
+    uid: { type: String, unique: true, sparse: true }, // Patient tag UID
     age: { type: Number },
     gender: { type: String, enum: ['Male', 'Female'] },
     smoking: { type: String, enum: ['Yes', 'No'] },
@@ -15,7 +15,7 @@ const userSchema = new mongoose.Schema({
     bloodpressure: { type: String, enum: ['Low', 'Normal', 'High'] }
 });
 
-// Şifreyi hashleme (Sadece healthcare kullanıcıları için)
+// Password hashing
 userSchema.pre('save', async function (next) {
     if (!this.isModified('password') || !this.password) return next();
     const salt = await bcrypt.genSalt(10);
@@ -23,7 +23,6 @@ userSchema.pre('save', async function (next) {
     next();
 });
 
-// Şifreyi doğrulama
 userSchema.methods.matchPassword = async function (enteredPassword) {
     return await bcrypt.compare(enteredPassword, this.password);
 };
