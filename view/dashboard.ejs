@@ -5,12 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Healthcare Dashboard</title>
     <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/patient.css">
 </head>
 <body>
     <nav>
         <div class="logo">Remote Patient Monitoring</div>
         <ul>
-            <li><a href="/add-patient" class="btn btn-add">➕ Add Patient</a></li>  <!-- Hasta Ekle Butonu -->
+            <li><a href="/add-patient" class="btn btn-add">➕ Add Patient</a></li>  
             <li><a href="/auth/logout" class="btn btn-logout">Logout</a></li>
         </ul>
     </nav>
@@ -18,6 +19,148 @@
     <section class="dashboard-container">
         <h1>Welcome, <%= user.fullname %></h1>
         <p>This is the healthcare professional dashboard.</p>
+
+        <h2>All Registered Patients</h2>
+        <select id="patient-select">
+            <option value="">Select a patient...</option>
+        </select>
     </section>
+
+    <section class="history-container">
+        <h3>Selected Patient's Test History</h3>
+        <table id="test-history">
+            <thead>
+                <tr>
+                    <th>Test Type</th>
+                    <th>Result</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td colspan="3">No patient selected.</td></tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section class="ekg-history-container">
+        <h2>EKG Visualization</h2>
+
+        <label for="ekg-select">Select EKG Test:</label>
+        <select id="ekg-select">
+            <option value="">No patient selected.</option>
+        </select>
+
+        <button id="view-ekg-btn">View EKG</button>
+
+        <div id="ekg-container" class="hidden">
+            <canvas id="ekgChart"></canvas>
+        </div>
+    </section>
+
+    <section class="history-container">
+        <h2>Blood Pressure History</h2>
+        <table id="bp-history-table">
+            <thead>
+                <tr>
+                    <th>Test Time</th>
+                    <th>Blood Pressure</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td colspan="2">No patient selected.</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+    
+    <script>
+        // Tüm hastaları getir
+        fetch('/api/all-patients')
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    const select = document.getElementById("patient-select");
+                    data.patients.forEach(patient => {
+                        const option = document.createElement("option");
+                        option.value = patient.username;
+                        option.textContent = patient.fullname + " (" + patient.username + ")";
+                        select.appendChild(option);
+                    });
+                }
+            });
+    
+        // Hasta seçildiğinde test geçmişini getir
+        document.getElementById("patient-select").addEventListener("change", function () {
+            const uid = this.value;
+            const tableBody = document.querySelector("#test-history tbody");
+            tableBody.innerHTML = "";
+    
+            if (!uid) {
+                tableBody.innerHTML = `<tr><td colspan="3">No patient selected.</td></tr>`;
+                return;
+            }
+    
+            fetch(`/api/test-history2/${uid}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success && data.history.length > 0) {
+                        data.history.forEach(test => {
+                            const row = document.createElement("tr");
+                            row.innerHTML = `
+                                <td>${test.testType.toUpperCase()}</td>
+                                <td>${test.result}</td>
+                                <td>${new Date(test.createdAt).toLocaleString()}</td>
+                            `;
+                            tableBody.appendChild(row);
+                        });
+                    } else {
+                        tableBody.innerHTML = `<tr><td colspan="3">No test history found for this patient.</td></tr>`;
+                    }
+                })
+                .catch(err => {
+                    console.error("❌ Test history fetch error:", err);
+                    tableBody.innerHTML = `<tr><td colspan="3">Error loading history.</td></tr>`;
+                });
+        });
+
+        document.addEventListener("DOMContentLoaded", loadTestHistory);
+
+        document.getElementById("patient-select").addEventListener("change", function loadBloodPressureHistory() {
+            const uid = this.value;
+            fetch(`/api/get-patient-ptt2/${uid}`)
+                .then(response => response.json())
+                .then(data => {
+                    const tableBody = document.querySelector("#bp-history-table tbody");
+                    tableBody.innerHTML = ""; 
+
+                    if (data.success && data.pttRecords.length > 0) {
+                        data.pttRecords.forEach(record => {
+                            const sbp = calculateSBP(record.PTT, userA0, userA1, userA2);
+                            const formattedDate = new Date(record.createdAt).toISOString().replace("T", " ").substring(0, 19);
+
+                            const row = document.createElement("tr");
+                            row.innerHTML = `
+                            <td>${formattedDate}</td>
+                            <td>${Math.round(sbp)} mmHg</td>
+                        `;
+                            tableBody.appendChild(row);
+                        });
+                    } else {
+                        tableBody.innerHTML = `<tr><td colspan="2">No blood pressure data found.</td></tr>`;
+                    }
+                })
+                .catch(error => {
+                    console.error("❌ Error loading BP history:", error);
+                    document.querySelector("#bp-history-table tbody").innerHTML = `<tr><td colspan="2">Error loading history.</td></tr>`;
+                });
+        });
+
+        document.addEventListener("DOMContentLoaded", loadBloodPressureHistory);
+
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="/js/healthcareData.js"></script> 
 </body>
 </html>

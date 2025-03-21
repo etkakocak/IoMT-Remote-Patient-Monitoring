@@ -757,6 +757,96 @@ app.post('/add-patient', requireHealthcare, async (req, res) => {
     }
 });
 
+app.get('/api/all-patients', requireHealthcare, async (req, res) => {
+    try {
+        const patients = await User.find({ role: 'patient' }, 'fullname username'); // UID = username
+        res.json({ success: true, patients });
+    } catch (error) {
+        console.error("❌ Error fetching patients:", error);
+        res.status(500).json({ success: false, message: "Database error." });
+    }
+});
+
+app.get('/api/test-history2/:patientUID', requireHealthcare, async (req, res) => {
+    const { patientUID } = req.params;
+    try {
+        const history = await TestResult.find({ thepatient: patientUID }).sort({ createdAt: -1 });
+        res.json({ success: true, history });
+    } catch (error) {
+        console.error("❌ Error fetching patient test history:", error);
+        res.status(500).json({ success: false, message: "Database error." });
+    }
+});
+
+app.get("/api/get-patient-ptt2/:patientUID", async (req, res) => {
+    const { patientUID } = req.params;
+    try {
+        const patientPTT = await BloodPressure.find({ thepatient: patientUID })
+            .sort({ createdAt: -1 }) 
+        
+        if (!patientPTT.length) {
+            return res.json({ success: false, message: "No PTT data found." });
+        }
+
+        res.json({ success: true, pttRecords: patientPTT });
+    } catch (error) {
+        console.error("❌ Error fetching PTT data:", error);
+        res.status(500).json({ success: false, message: "Database error." });
+    }
+});
+
+app.get('/api/get-latest-ekg2/:patientUID', async (req, res) => {
+    const { patientUID } = req.params;
+    try {
+        const latestEKGs = await EKGResult.find({ thepatient: patientUID })
+            .sort({ createdAt: -1 }) // En son kayıtları getir
+            .limit(5); // Son 5 ölçümü getir
+
+        if (!latestEKGs.length) {
+            return res.json({ success: false, message: "No EKG data found." });
+        }
+
+        res.json({ 
+            success: true, 
+            ekgResults: latestEKGs.map(test => ({
+                id: test._id,
+                ekg: test.result, 
+                date: new Date(test.createdAt).toLocaleString()
+            }))
+        });
+    } catch (error) {
+        console.error("❌ Error fetching EKG data:", error);
+        res.status(500).json({ success: false, message: "Database error." });
+    }
+});
+
+app.get("/api/get-patient-info2/:patientUID", async (req, res) => {
+    const { patientUID } = req.params;
+
+    try {
+        const patientInfo = await User.findOne({ username: patientUID });
+
+        if (!patientInfo) {
+            return res.json({ success: false, message: "Patient info not found." });
+        }
+
+        res.json({ 
+            success: true, 
+            patient: {
+                age: patientInfo.age,
+                gender: patientInfo.gender,
+                smoking: patientInfo.smoking,
+                exercise: patientInfo.exercise,
+                hypertension: patientInfo.hypertension,
+                bloodpressure: patientInfo.bloodpressure
+            }
+        });
+
+    } catch (error) {
+        console.error("❌ Error fetching patient info:", error);
+        res.status(500).json({ success: false, message: "Database error." });
+    }
+});
 
 // 📌 ✅ **Çıkış (Logout) İşlemi**
 app.get('/auth/logout', (req, res) => {
