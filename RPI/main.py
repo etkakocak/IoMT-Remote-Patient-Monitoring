@@ -8,13 +8,13 @@ import spo2
 import EKG
 import bp_live
 
-# 📡 **WiFi Bilgileri**
-WIFI_SSID = "Etkas S24 Ultra"
-WIFI_PASSWORD = "etka12345"
+WIFI_SSID = "SSID"
+WIFI_PASSWORD = "PASSWORD"
 
-# 📡 **Web Sunucusunun IP Adresi**
+# Web server IP
 SERVER_IP = "192.168.3.181"
 
+# Web server APIs
 SCAN_CARD_URL = f"http://{SERVER_IP}:5000/api/scan-card"
 SEND_TAG_URL = f"http://{SERVER_IP}:5000/api/send-tag"
 
@@ -30,37 +30,36 @@ STORE_EKG_URL = f"http://{SERVER_IP}:5000/api/store-EKG"
 BP_URL = f"http://{SERVER_IP}:5000/api/BP"
 STORE_BP_URL = f"http://{SERVER_IP}:5000/api/store-BP"
 
-# 📡 **WiFi'ye Bağlan**
 def connect_wifi():
     wlan = network.WLAN(network.STA_IF)
     wlan.active(True)
     wlan.connect(WIFI_SSID, WIFI_PASSWORD)
 
-    print("🔄 WiFi'ye bağlanıyor...")
+    print("Connecting to WiFi...")
     while not wlan.isconnected():
         time.sleep(1)
 
-    print("✅ WiFi'ye bağlandı! IP Adresi:", wlan.ifconfig()[0])
+    print("Connected to WiFi. IP Address:", wlan.ifconfig()[0])
 
 connect_wifi()
 
-# 🔄 **Kart Okuma Fonksiyonu**
+# Scan tag/card by PN532
 def scan_card():
-    print("\n📡 Kart okutmaya başlıyoruz...")
+    print("\nScanning...")
 
-    timeout = time.time() + 3  # 5 saniye bekleme süresi
+    timeout = time.time() + 3  
     while time.time() < timeout:
         uid = pn532.read_passive_target(timeout=500)
 
         if uid:
             uid_str = "-".join([str(i) for i in uid])
-            print(f"📍 Kart Algılandı! UID: {uid_str}")
-            return uid_str  # Okunan UID'yi döndür
+            print(f"Tag detected, UID: {uid_str}")
+            return uid_str  
 
-    print("❌ Kart okunamadı, zaman aşımı!")
-    return None  # Zaman aşımı durumunda None döndür
+    print("scan timeout")
+    return None  
 
-# 📡 **SPI & PN532 Başlat**
+# SPI & PN532 start
 spi_dev = SPI(1, baudrate=1000000, polarity=0, phase=0, sck=Pin(10), mosi=Pin(11), miso=Pin(12))
 cs_pin = Pin(13, Pin.OUT)
 cs_pin.on()
@@ -69,13 +68,13 @@ pn532 = nfc.PN532(spi_dev, cs_pin)
 
 try:
     ic, ver, rev, support = pn532.get_firmware_version()
-    print("✅ PN532 bulundu! Firmware sürümü: {}.{}".format(ver, rev))
+    print("PN532 found! Firmware version: {}.{}".format(ver, rev))
 except RuntimeError as e:
-    print("❌ PN532 algılanamadı:", e)
+    print("PN532 cannot found:", e)
 
 pn532.SAM_configuration()
 
-# 📡 **RPi Tarafında Sürekli Bekleme Döngüsü**
+# Rpi listen server requests loop
 while True:
     try:
         scanresponse = urequests.get(SCAN_CARD_URL)
@@ -97,68 +96,63 @@ while True:
         bpresponse.close()
         
         if scandata == ('SCAN'):
-            print("🔄 Web Sunucusu Tarama Başlattı!")
-            # ✅ **Kart taramasını başlat**
+            print("Server started scanning.")
             uid = scan_card()  
             if uid:
-                # 📡 **Sunucuya tag bilgisini gönder**
-                print(f"📡 Sunucuya UID {uid} gönderiliyor...")
+                print(f"UID {uid} is sent to server...")
                 response = urequests.post(SEND_TAG_URL, json={"uid": uid})
-                print("📡 Sunucudan gelen cevap:", response.text)
+                print("Response from server:", response.text)
                 response.close()
             else:
-                print("❌ Kart taranamadı veya zaman aşımı!")
+                print("Scan timeout!")
                 
         if measdata == ('measure'):
-            print("🔄 Web Sunucusu Vücut Sıcaklığı Ölçümünü Başlattı!")
-            temp = bodytemp.get_bodytemp()  # ✅ Vücut sıcaklığını ölç
+            print("Server started Body Temperature measurement.")
+            temp = bodytemp.get_bodytemp()  
             if temp:
-                # 📡 **Sunucuya sıcaklık verisini gönder**
-                print(f"📡 Sunucuya sıcaklık {temp:.2f}°C gönderiliyor...")
+                print(f"Bodytemp {temp:.2f}°C is sent to server...")
                 response = urequests.post(STORE_BODYTEMP_URL, json={"temperature": temp})
-                print("📡 Sunucudan gelen cevap:", response.text)
+                print("Response from server:", response.text)
                 response.close()
             else:
-                print("❌ Sıcaklık sensörü bulunamadı!")
-            print("⏳ Test tamamlandı.")
+                print("Sensor not found.")
+            print("Test done.")
             time.sleep(10)
         
         if spo2data == ('spo2start'):
-            print("Web Sunucusu spo2 Ölçümünü Başlattı!")
+            print("Server started spo2 measurement.")
             spo2_dat = spo2.measure_spo2()  
             if spo2_dat:
-                # 📡 **Sunucuya sıcaklık verisini gönder**
-                print(f"📡 Sunucuya {spo2_dat:.2f} gönderiliyor...")
+                print(f"Spo2 {spo2_dat:.2f} is sent to server...")
                 response = urequests.post(STORE_SPO2_URL, json={"spo2": spo2_dat})
-                print("📡 Sunucudan gelen cevap:", response.text)
+                print("Response from server:", response.text)
                 response.close()
             else:
-                print("❌ sensör bulunamadı!")
-            print("⏳ Test tamamlandı.")
+                print("Sensor not found.")
+            print("Test done.")
             time.sleep(10)
         
         if ekgdata == ('EKGstart'):
-            print("Web Sunucusu EKG Ölçümünü Başlattı!")
+            print("Server started EKG measurement.")
             EKG_dat = EKG.measure_ekg()  
             if EKG_dat:
-                # 📡 **Sunucuya sıcaklık verisini gönder**
-                print(f"📡 Sunucuya gönderiliyor...")
+                print(f"Sent to server...")
                 response = urequests.post(STORE_EKG_URL, json={"EKG": EKG_dat})
-                print("📡 Sunucudan gelen cevap:", response.text)
+                print("Response from server:", response.text)
                 response.close()
             else:
-                print("❌ sensör bulunamadı!")
-            print("⏳ Test tamamlandı.")
+                print("Sensor not found.")
+            print("Test done.")
             time.sleep(10)
         
         if bpdata == ('BPstart'):
-            print("Web Sunucusu BP Ölçümünü Başlattı!")
-            bp_live.start_bp_measurement()  # ✅ **BP Ölçümünü Başlat**
-            print("⏳ Test tamamlandı.")
+            print("Server started BP measurement.")
+            bp_live.start_bp_measurement()  
+            print("Test done.")
             time.sleep(10)
 
     except Exception as e:
-        print("❌ Hata:", e)
+        print("Error:", e)
 
-    time.sleep(1)  # 1 saniye bekle ve tekrar kontrol et
+    time.sleep(1) 
 

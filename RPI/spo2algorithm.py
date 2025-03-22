@@ -1,7 +1,6 @@
 import math
 
 def moving_average(signal, window_size=5):
-    """ NumPy kullanmadan hareketli ortalama filtresi uygular. """
     filtered_signal = []
     for i in range(len(signal) - window_size + 1):
         window = signal[i:i + window_size]
@@ -17,13 +16,10 @@ def standard_deviation(values):
     return variance ** 0.5
 
 
-### 📌 SPO₂ HESAPLAMA ###
+# spo2 calc with PPG data
 def process_spo2(red_list, ir_list, sample_rate=400):
-    """
-    PPG verilerini işleyerek yalnızca SpO₂ hesaplar.
-    """
 
-    # IIR filtre ile DC bileşeni takibi
+    # DC component tracking with IIR filter
     alpha = 0.05  
     red_baseline = red_list[0] if len(red_list) > 0 else 0
     ir_baseline  = ir_list[0] if len(ir_list) > 0 else 0
@@ -35,11 +31,11 @@ def process_spo2(red_list, ir_list, sample_rate=400):
         red_val = red_list[i]
         ir_val  = ir_list[i]
 
-        # IIR güncelleme
+        # IIR update
         red_baseline = alpha * red_val + (1 - alpha) * red_baseline
         ir_baseline  = alpha * ir_val  + (1 - alpha) * ir_baseline
 
-        # AC sinyalini hesapla
+        # AC signal calc
         red_ac_list.append(red_val - red_baseline)
         ir_ac_list.append(ir_val - ir_baseline)
 

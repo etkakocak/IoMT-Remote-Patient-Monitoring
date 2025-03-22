@@ -3,36 +3,35 @@ import onewire
 import ds18x20
 import time
 
-# 📡 DS18B20 Sensör Bağlantısı
+# DS18B20 sensor onewire connect
 ds_pin = machine.Pin(28)  
 ow = onewire.OneWire(ds_pin)
 ds = ds18x20.DS18X20(ow)
 
-roms = ds.scan()  # Sensörleri tarıyoruz
+roms = ds.scan()  # sensor roms
 if not roms:
-    print("❌ Vücut sıcaklığı sensörü bulunamadı!")
+    print("No sensor found.")
 else:
-    print(f"✅ {len(roms)} DS18B20 sensörü bulundu.")
+    print(f"✅ {len(roms)} DS18B20 found.")
 
-# 🔥 **Vücut Sıcaklığı Ölçüm Fonksiyonu**
 def get_bodytemp():
     if not roms:
-        return None  # Sensör yoksa None döndür
+        return None  
 
-    print("\n⏳ 40 saniye boyunca ölçüm yapılıyor... Sensörü vücudunuza yerleştirin!")
+    print("\n40 second measurement.")
     
-    timeout = time.time() + 40  # 40 saniyelik süre başlat
-    last_temp = None  # Son ölçülen sıcaklık değeri
+    timeout = time.time() + 40  
+    last_temp = None  
     
     while time.time() < timeout:
-        ds.convert_temp()  # Ölçüm başlat
-        time.sleep_ms(750)  # DS18B20 ölçüm süresi
+        ds.convert_temp()  
+        time.sleep_ms(750)  
         for rom in roms:
             temp = ds.read_temp(rom)
-            last_temp = temp  # En son ölçülen sıcaklık güncellenir
-            print(f"🌡️ Güncel Vücut Sıcaklığı: {temp:.2f}°C")
-        time.sleep(2)  # 2 saniye bekleyerek tekrar ölç
+            last_temp = temp  
+            print(f"Calculating: {temp:.2f}°C")
+        time.sleep(2)  
 
-    print(f"\n✅ Ölçüm tamamlandı! Son vücut sıcaklığı: {last_temp:.2f}°C")
-    return last_temp  # 40 saniye sonunda en son ölçülen sıcaklığı döndür
+    print(f"\nDone. Bodytemp: {last_temp:.2f}°C")
+    return last_temp  
 

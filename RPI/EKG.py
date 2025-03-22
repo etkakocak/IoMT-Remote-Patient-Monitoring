@@ -2,34 +2,27 @@ import machine
 import time
 import ujson
 
-adc = machine.ADC(26)  # ADC pini (EKG sensörünün bağlı olduğu pin)
-WINDOW_SIZE = 200  # 200 veri toplanacak
-INIT_IGNORE_TIME = 10  # İlk 10 saniyeyi göz ardı et
+adc = machine.ADC(26)  # ADC pin
+WINDOW_SIZE = 200  
+INIT_IGNORE_TIME = 10  # ignore time bandpass filter
 
 def measure_ekg():
-    """
-    EKG verisini ölçer.
-    - İlk 10 saniye gelen verileri **umursamaz**.
-    - Sonrasında **200 adet** veri toplar.
-    - **JSON formatında bir liste döndürür.**
-    """
-
-    print("⏳ EKG başlatılıyor... İlk 10 saniye veriler yok sayılacak.")
+    print("EKG starts.")
     
     start_time = time.time()
 
     while time.time() - start_time < INIT_IGNORE_TIME:
-        adc.read_u16()  # İlk 10 saniyedeki verileri sadece oku, kaydetme
+        adc.read_u16()  
         time.sleep(0.05)  
 
-    print("✅ EKG ölçümü başlıyor! 200 veri toplanacak...")
+    print("EKG starts...")
 
     ekg_data = []
 
     while len(ekg_data) < WINDOW_SIZE:
-        value = adc.read_u16()  # ADC değerini oku
+        value = adc.read_u16()  
         ekg_data.append(value)
-        time.sleep(0.05)  # Örnekleme süresi (20 Hz ≈ 0.05s per sample)
+        time.sleep(0.05)  
 
-    print("✅ EKG ölçümü tamamlandı.")
-    return ekg_data  # Listeyi döndür
+    print("EKG done.")
+    return ekg_data  
