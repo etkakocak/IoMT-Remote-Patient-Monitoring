@@ -4,38 +4,35 @@ import urequests
 from machine import I2C, Pin, ADC
 from max30102 import MAX30102
 
-# **Server Adresi**
+# API
 SERVER_URL = "http://192.168.3.181:5000/api/live-bp"
 
-# **MAX30102 Sensörü Ayarları**
+# MAX30102
 i2c = I2C(0, sda=Pin(4), scl=Pin(5), freq=400000)
 sensor1 = MAX30102(i2c=i2c)
 
-# **ICQUANZX ADC Bağlantısı (Örn: GPIO26)**
+# ICQUANZX
 sensor2 = ADC(Pin(26))
 
-# **Sensörü Başlatma Fonksiyonu**
 def initialize_sensors():
-    print("🔄 MAX30102 başlatılıyor...")
+    print("MAX30102 starts...")
     sensor1.setup_sensor()
     time.sleep(1)
 
     if not sensor1.check_part_id():
-        print("❌ HATA: MAX30102 sensörü bulunamadı! Lütfen bağlantıları kontrol edin.")
+        print("Error")
         return False
 
-    print("✅ MAX30102 başarıyla başlatıldı!")
+    print("MAX30102 started.")
     return True
 
-# **Sensörden Veri Okuma**
 def read_sensor_data():
-    """Sensörlerden veri oku ve gönder."""
     try:
         ir = sensor1.get_ir() or 0
         red = sensor1.get_red() or 0
         ir2_raw = sensor2.read_u16()
-        ir2 = ir2_raw / 65535  # Normalize edilmiş değer
-        timestamp = time.ticks_ms()  # Milisaniye bazlı zaman damgası
+        ir2 = ir2_raw / 65535  # Normalized value
+        timestamp = time.ticks_ms()  # Millisecond based timestamp
 
         return {
             "timestamp": timestamp,
@@ -44,15 +41,14 @@ def read_sensor_data():
             "icquanzx": ir2
         }
     except Exception as e:
-        print("❌ Sensör okuma hatası:", e)
+        print("Error:", e)
         return None
 
-# **Ana Çalışma Fonksiyonu (Main.py'den çağrılacak)**
 def start_bp_measurement():
     if not initialize_sensors():
-        return False  # Sensör başlatılamadıysa çık
+        return False  
 
-    print("⏳ BP Ölçümü Başlıyor! Sunucuya veri akışı başlatıldı...")
+    print("BP Measurement Starts, Data flow to server started...")
 
     try:
         for _ in range(200):
@@ -61,13 +57,13 @@ def start_bp_measurement():
             if sensor_data:
                 try:
                     response = urequests.post(SERVER_URL, json=sensor_data)
-                    print(f"📡 Veri gönderildi: {sensor_data}")
+                    print(f"Data sent: {sensor_data}")
                     response.close()
                 except Exception as e:
-                    print("❌ Veri gönderme hatası:", e)
+                    print("Error sending:", e)
 
-            time.sleep(0.02)  # **50 Hz veri akışı**
+            time.sleep(0.02)  # 50 Hz
     
     except KeyboardInterrupt:
-        print("🔴 BP Ölçümü durduruldu!")
-        return False  # Döngü durdurulduğunda False döndür
+        print("BP Measurement Stopped.")
+        return False  
