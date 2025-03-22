@@ -1,35 +1,48 @@
-################################
-# Bilimsel a0, a1, a2 Hesaplama
-################################
-def estimate_parameters(age, gender, smoking, exercise, hypertension, bp_status):
-    """
-    Kullanıcının yaşı, cinsiyeti, sigara kullanımı, spor alışkanlığı, hipertansiyon geçmişi ve
-    tansiyon durumuna göre a0, a1 ve a2 parametrelerini hesaplar.
-    """
+from machine import Pin, SPI
+import NFC_PN532 as nfc
+import time
 
-    # 🔹 Arteriyel Elastisite (a0) Hesaplama
-    a0 = 2.0 - (age / 100)  # Yaş arttıkça arteriyel elastisite azalır
-    if gender == "K":
-        a0 += 0.1  # Kadınlarda genç yaşta biraz daha yüksek olabilir
-    if smoking:
-        a0 -= 0.2  # Sigara içmek arteriyel elastisiteyi düşürür
-    if exercise:
-        a0 += 0.2  # Düzenli spor yapmak elastisiteyi artırır
-    if hypertension:
-        a0 -= 0.3  # Hipertansiyon arterlerin sertleşmesine neden olur
+reset_pin = Pin(9, Pin.OUT)
 
-    # 🔹 Arteriyel Sertlik (a1) Hesaplama (PWV yaşa bağlı artıyor)
-    a1 = 5.0 + 0.1 * (age - 20)  # 20 yaş için 5.0 m/s, her yıl için 0.1 ekleniyor
+# SPI def
+spi_dev = SPI(1,
+              baudrate=1000000,
+              polarity=0,
+              phase=0,
+              sck=Pin(10),
+              mosi=Pin(11),
+              miso=Pin(12))
 
-    # 🔹 Nabız Dalgası Yayılma Hızı (a2) Hesaplama
-    a2 = 0.5  # Baz değer
-    if hypertension:
-        a2 += 1.0  # Hipertansiyon arteriyel sertliği artırır
-    if smoking:
-        a2 += 0.5  # Sigara arter duvarlarını sertleştirir
-    if bp_status == "D":
-        a2 -= 0.5  # Düşük tansiyonu olanlarda PWV daha düşük olur
-    if bp_status == "Y":
-        a2 += 0.5  # Yüksek tansiyonu olanlarda PWV artar
+cs_pin = Pin(13, Pin.OUT)
+cs_pin.on()
 
-    return a0, a1, a2
+# PN532 start
+pn532 = nfc.PN532(spi_dev, cs_pin, reset=reset_pin)
+
+# Firmware version
+try:
+    ic, ver, rev, support = pn532.get_firmware_version()
+    print("PN532 found! Firmware version: {}.{}".format(ver, rev))
+except RuntimeError as e:
+    print("PN532 not found:", e)
+    time.sleep(1)
+    try:
+        ic, ver, rev, support = pn532.get_firmware_version()
+        print("PN532 found! Firmware version: {}.{}".format(ver, rev))
+    except RuntimeError as e2:
+        print("PN532 not found:", e2)
+
+# Configure PN532 to read MiFare 
+pn532.SAM_configuration()
+
+# Scan tag loop
+print("\nReady to scan...")
+while True:
+    uid = pn532.read_passive_target(timeout=500)  
+
+    if uid:
+        print("\nTag scanned! UID:", [hex(i) for i in uid])
+        print("Tag ID: {}".format("-".join([str(i) for i in uid])))
+    else:
+        print(".", end="") 
+    time.sleep(0.5)
