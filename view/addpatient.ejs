@@ -8,11 +8,11 @@
     <link rel="stylesheet" href="/css/addpatient.css">
     <script>
         function scanTag() {
-            fetch('/api/scan-card', { method: "POST" }) // ✅ POST metodu ile gönder
+            fetch('/api/scan-card', { method: "POST" }) // scan tag request
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        setTimeout(() => checkForTag(), 3000); // 6 saniye sonra sonucu kontrol et
+                        setTimeout(() => checkForTag(), 3000); 
                     } else {
                         alert("❌ Scan request failed.");
                     }

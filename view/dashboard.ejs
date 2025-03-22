@@ -75,7 +75,6 @@
     </section>
     
     <script>
-        // Tüm hastaları getir
         fetch('/api/all-patients')
             .then(res => res.json())
             .then(data => {
@@ -90,7 +89,7 @@
                 }
             });
     
-        // Hasta seçildiğinde test geçmişini getir
+        // get test history of selected patient
         document.getElementById("patient-select").addEventListener("change", function () {
             const uid = this.value;
             const tableBody = document.querySelector("#test-history tbody");
@@ -119,7 +118,7 @@
                     }
                 })
                 .catch(err => {
-                    console.error("❌ Test history fetch error:", err);
+                    console.error("Test history fetch error:", err);
                     tableBody.innerHTML = `<tr><td colspan="3">Error loading history.</td></tr>`;
                 });
         });
@@ -151,7 +150,7 @@
                     }
                 })
                 .catch(error => {
-                    console.error("❌ Error loading BP history:", error);
+                    console.error("Error loading BP history:", error);
                     document.querySelector("#bp-history-table tbody").innerHTML = `<tr><td colspan="2">Error loading history.</td></tr>`;
                 });
         });
