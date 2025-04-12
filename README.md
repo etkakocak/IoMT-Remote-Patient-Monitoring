@@ -18,4 +18,4 @@ This project is a full-stack web-based Remote Patient Monitoring (RPM) system th
 
 ## Documentation
 The complete academic report, covering the design, technical implementation, and other aspects of the system, is available:  
-👉 [Remote Patient Monitoring - Final Report](./documentation)
+👉 [Remote Patient Monitoring - Final Report](https://etkakocak.github.io/IoMT-Remote-Patient-Monitoring/)
