@@ -1,6 +1,6 @@
 # Remote Patient Monitoring
 
-[**📄View PDF**](https://github.com/etkakocak/IoMT-Remote-Patient-Monitoring/raw/main/docs/IoMT%20based%20Remote%20Patient%20Monitoring.pdf)
+[**📄View PDF**](https://etkakocak.github.io/IoMT-Remote-Patient-Monitoring/IoMT%20based%20Remote%20Patient%20Monitoring.pdf)
 
 This report presents the development and evaluation of a Remote Patient Monitoring (RPM) system based on the Internet of Medical Things (IoMT). The system integrates embedded hardware, biomedical sensors, and full-stack web technologies to enable patients to measure and transmit vital health data. Key functionalities include NFC-based user authentication, secure data handling, and a role-based web interface for patients and healthcare professionals. The system demonstrates a cost-effective, extensible prototype of RPM solutions.  
 
@@ -24,3 +24,4 @@ Suggested BibTeX formatted citation:
   month        = {Apr. 13},
   url          = {https://github.com/etkakocak/IoMT-Remote-Patient-Monitoring/tree/main/documentation}
 }
+```
