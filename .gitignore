@@ -6,4 +6,3 @@ package-lock.json
 .eslintrc.cjs
 .jsdoc.json
 .stylelintrc.cjs
-vite.config.js
